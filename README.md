@@ -9,10 +9,11 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38BDF8?logo=tailwindcss)](https://tailwindcss.com/)
   [![pnpm](https://img.shields.io/badge/pnpm-10.0%2B-orange?logo=pnpm)](https://pnpm.io/)
+  [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 
   **🚀 Turn DOIs and paper titles into clean academic citations in 7 formats instantly 📚**
 
-  [Features](#-features) · [Quick Start](#-quick-start) · [API Reference](#-api-reference) · [License](#-license)
+  [Features](#-features) · [Quick Start](#-quick-start) · [Docker Deployment](#-docker-deployment) · [API Reference](#-api-reference) · [License](#-license)
 </div>
 
 ---
@@ -97,6 +98,52 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to launch 
 
 ---
 
+## 🐳 Docker Deployment
+
+`cite-for-all` provides multi-stage Docker support for fast, lightweight containerized deployments using Node.js Alpine base images and Next.js standalone builds.
+
+### Quick Start with Docker Compose (Recommended)
+
+```bash
+# Start the application in detached mode
+docker compose up -d --build
+```
+
+Access the app at [http://localhost:3000](http://localhost:3000).
+
+To stop the container:
+```bash
+docker compose down
+```
+
+### Using Docker CLI
+
+```bash
+# 1. Build the production Docker image
+docker build -t cite-for-all .
+
+# 2. Run the container
+docker run -d \
+  -p 3000:3000 \
+  -e CROSSREF_MAILTO=you@example.com \
+  --name cite-for-all \
+  cite-for-all
+```
+
+### Environment Variables in Docker
+
+Environment variables can be defined in `.env` (which `docker-compose.yml` automatically reads) or passed via the `-e` flag:
+
+| Environment Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PORT` | `3000` | HTTP listening port (maps container & host port in Docker Compose) |
+| `NODE_ENV` | `production` | Application runtime environment (`production` or `development`) |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Base URL for site metadata & canonical links |
+| `CROSSREF_MAILTO` | *(Optional)* | Email passed to Crossref polite pool |
+| `OPENALEX_API_KEY` | *(Optional)* | Key for OpenAlex exact-title fallback |
+
+---
+
 ## 🔌 API Reference
 
 ### `POST /api/cite`
@@ -173,14 +220,18 @@ with no metadata, citation text, BibTeX, or candidate list:
 
 ## 🌐 Environment Variables
 
-Copy `.env.example` to `.env.local` when configuration is needed:
+Copy `.env.example` to `.env` (for Docker/Compose) or `.env.local` (for local Node):
 
 ```bash
+NODE_ENV=production
+PORT=3000
 NEXT_PUBLIC_SITE_URL=https://your-domain.example
 CROSSREF_MAILTO=you@example.com
 OPENALEX_API_KEY=
 ```
 
+- `NODE_ENV` defaults to `production`.
+- `PORT` defaults to `3000`.
 - `NEXT_PUBLIC_SITE_URL` defaults to `http://localhost:3000`.
 - `CROSSREF_MAILTO` is recommended so Crossref can identify requests and route them through its polite pool.
 - `OPENALEX_API_KEY` is optional and only enables an additional exact-title fallback.
@@ -210,7 +261,10 @@ cite-for-all/
 ├── LICENSES/              # Third-party license copies
 ├── scripts/               # Reproducible CSL asset sync
 ├── THIRD_PARTY_NOTICES.md
+├── .dockerignore          # Excluded pattern rules for Docker
 ├── components.json        # shadcn UI config
+├── docker-compose.yml     # Docker Compose orchestration definition
+├── Dockerfile             # Multi-stage Docker build specification
 ├── package.json
 └── tsconfig.json
 ```

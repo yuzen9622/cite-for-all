@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules
+/.pnpm-store
+
+# Next.js build output
+/.next/
+/out/
+
+# IDE & Editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env*.local
+.env
+
+# Tests & Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+vitest.config.*
+/graphify-out
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
