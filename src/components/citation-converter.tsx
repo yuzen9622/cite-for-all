@@ -9,7 +9,7 @@ import {
   LoaderCircle,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -48,17 +48,14 @@ export function CitationConverter() {
           <span className="font-mono text-accent">/</span>
           <span>ALL</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          render={
-            <a
-              href="https://citationstyles.org/"
-              target="_blank"
-              rel="noreferrer"
-            />
-          }
-          className="text-muted-foreground"
+        <a
+          href="https://citationstyles.org/"
+          target="_blank"
+          rel="noreferrer"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "text-muted-foreground"
+          )}
         >
           <span className="size-2 rounded-full bg-[#5d9a56] shadow-[0_0_0_5px_rgb(93_154_86/0.12)]" />
           <span className="hidden md:inline">
@@ -67,7 +64,7 @@ export function CitationConverter() {
           </span>
           <span className="md:hidden">(c) Frank Bennett · CSL</span>
           <ExternalLink className="size-3.5" />
-        </Button>
+        </a>
       </header>
 
       <section
@@ -105,13 +102,13 @@ export function CitationConverter() {
             <TabsList className="h-10 rounded-none border bg-card p-1">
               <TabsTrigger
                 value="single"
-                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground"
+                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
               >
                 單筆轉換
               </TabsTrigger>
               <TabsTrigger
                 value="batch"
-                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground"
+                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
               >
                 批次轉換
               </TabsTrigger>
@@ -274,12 +271,15 @@ export function CitationConverter() {
                     }
                     className="my-5"
                   >
-                    <TabsList className="grid h-auto w-full grid-cols-2 gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0 sm:grid-cols-4 xl:grid-cols-7">
+                    <TabsList
+                      className="grid h-auto w-full grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0"
+                      style={{ height: "auto" }}
+                    >
                       {STYLE_OPTIONS.map((option) => (
                         <TabsTrigger
                           key={option.id}
                           value={option.id}
-                          className="h-11 rounded-none border-r border-b px-2 text-xs font-extrabold data-active:bg-primary data-active:text-primary-foreground"
+                          className="h-auto min-h-11 rounded-none border-r border-b px-2 py-2 text-center text-xs leading-tight font-extrabold whitespace-normal data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
                         >
                           {option.label}
                         </TabsTrigger>
