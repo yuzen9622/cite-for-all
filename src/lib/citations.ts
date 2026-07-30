@@ -1,8 +1,8 @@
 export const STYLE_OPTIONS = [
   { id: "apa", label: "APA 7th" },
   { id: "mla", label: "MLA 9" },
-  { id: "chicago", label: "Chicago" },
-  { id: "harvard", label: "Harvard" },
+  { id: "chicago", label: "Chicago Author–Date" },
+  { id: "harvard", label: "Harvard Cite Them Right" },
   { id: "ieee", label: "IEEE" },
   { id: "vancouver", label: "Vancouver" },
   { id: "bibtex", label: "BibTeX" },
@@ -24,25 +24,35 @@ export interface CitationMetadata {
   type?: string
 }
 
-export interface DoxaCitation {
+export interface CitationData {
   success: true
-  inputType: "doi" | "title" | string
+  inputType: "doi" | "title"
   metadata: CitationMetadata
   citations: Record<Exclude<CitationStyle, "bibtex">, string>
   bibtex: string
+  provenance: {
+    provider: "doi.org" | "crossref" | "datacite" | "openalex"
+    providerId: string
+    match: "doi-exact" | "title-exact"
+  }
 }
 
 export type CitationResult =
   | {
       success: true
       input: string
-      data: DoxaCitation
+      data: CitationData
     }
   | {
       success: false
       input: string
       error: string
       status?: number
+      code?:
+        | "NOT_FOUND"
+        | "UPSTREAM_RATE_LIMITED"
+        | "UPSTREAM_UNAVAILABLE"
+        | "INTERNAL_ERROR"
     }
 
 const DOI_PATTERN = /10\.\d{4,9}\/[-._;()/:a-z0-9]+/gi

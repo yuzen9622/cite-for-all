@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const results = await convertCitations(inputs)
+  const results = await convertCitations(inputs, request.signal)
 
   return NextResponse.json(
     {
