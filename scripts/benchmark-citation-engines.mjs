@@ -279,8 +279,13 @@ for (let round = 1; round <= rounds; round += 1) {
     ...cases.slice(0, (round - 1) % cases.length),
   ]
 
-  for (const testCase of rotatedCases) {
-    for (const engine of ["self-hosted", "papersflow"]) {
+  for (const [caseIndex, testCase] of rotatedCases.entries()) {
+    const engines =
+      (round + caseIndex) % 2 === 0
+        ? ["self-hosted", "papersflow"]
+        : ["papersflow", "self-hosted"]
+
+    for (const engine of engines) {
       const result = await measure(engine, testCase, round)
       results.push(result)
       process.stdout.write(
@@ -295,7 +300,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   methodology: {
     rounds,
-    requestMode: "sequential, engine order alternates by case pair",
+    requestMode: "sequential; engine order alternates for each case",
     timeoutMs: 30_000,
     selfUrl,
     papersflowUrl: PAPERSFLOW_URL,
