@@ -1,53 +1,59 @@
 # Cite for All
 
-以 DOI、DOI 網址或完整論文標題查找文獻，並轉換成 APA 7th、MLA 9、Chicago、Harvard、IEEE、Vancouver 或 BibTeX。支援單筆與最多 15 筆的批次轉換。
+開源的文獻引用格式轉換工具。輸入 DOI、DOI URL 或完整論文標題，即可取得 APA 7th、MLA 9、Chicago、Harvard、IEEE、Vancouver 與 BibTeX。
 
 ## 功能
 
-- DOI、`https://doi.org/...`、paper title 三種輸入
-- 單筆與批次轉換；批次採每行一筆
-- 同一份查詢結果即時切換七種格式，不需重新呼叫 API
-- 批次轉換保留逐筆錯誤，不會因一筆失敗而清空整批
+- 單筆與批次轉換，批次每行一筆、單次最多 15 筆
+- 同一份查詢結果即時切換七種格式，不需重新查詢
+- 批次部分失敗時保留其他成功結果
 - IEEE 與 Vancouver 批次輸出自動重新編號
-- 逐筆複製、全部複製、下載 `.txt` 或 BibTeX `.bib`
-- Responsive UI、鍵盤 focus 樣式與 reduced-motion 支援
+- 逐筆複製、全部複製、下載 `.txt` 或 `.bib`
+- Responsive UI、keyboard focus 與 reduced-motion 支援
 
-## 技術架構
+## 技術
 
-- Next.js 16 + React 19
-- vinext + Cloudflare Worker deployment
-- `POST /api/cite` 作為 server-side proxy
-- 上游服務：`https://doxa.papersflow.ai/api/public/cite`
+- Next.js App Router
+- React + TypeScript
+- Tailwind CSS
+- shadcn/ui
+- pnpm
+- PapersFlow Doxa citation API
 
-瀏覽器不會直接呼叫 Doxa。這是必要的，因為 Doxa 公開 endpoint 的 CORS 僅允許 PapersFlow 網域。本站 server route 也負責輸入驗證、批次限流與錯誤正規化。
-
-## 本機執行
-
-需求：Node.js `>=22.13.0`
+本專案由標準 `create-next-app` 建立：
 
 ```bash
-npm install
-npm run dev
+pnpm create next-app@latest --src-dir
 ```
 
-開啟終端顯示的 Local URL。
+UI 元件透過 shadcn CLI 管理，設定位於 `components.json`。所有自建 React component 檔名使用 kebab-case。
 
-## 驗證
+## 本機開發
+
+需求：
+
+- Node.js 20.9 或更新版本
+- pnpm 10
 
 ```bash
-npm run build
-npm test
-npm run lint
+pnpm install
+pnpm dev
+```
+
+開啟 <http://localhost:3000>。
+
+## 可用指令
+
+```bash
+pnpm dev
+pnpm lint
+pnpm build
+pnpm start
 ```
 
 ## API
 
-Request：
-
-```http
-POST /api/cite
-Content-Type: application/json
-```
+前端透過同源 `POST /api/cite` 查詢，server route 會驗證輸入並以每批三筆的方式呼叫 Doxa，避免瀏覽器 CORS 限制。
 
 ```json
 {
@@ -58,8 +64,42 @@ Content-Type: application/json
 }
 ```
 
-Response 會保留輸入順序，`results` 中每筆各自標示 `success`。單次最多 15 筆，每筆最多 500 字元。
+單次最多 15 筆，每筆最多 500 字元。Response 保留輸入順序，並讓每筆結果各自標示 `success`。
 
-## 使用提醒
+## 環境變數
 
-文獻 metadata 與格式由 PapersFlow 提供。引用產生器能大幅減少手動排版，但正式投稿前仍應依目標期刊或學校採用的 style guide 複核。
+部署時可設定公開網站網址，供 Open Graph metadata 產生正確的絕對 URL：
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://your-domain.example
+```
+
+本機未設定時預設為 `http://localhost:3000`。
+
+## 專案結構
+
+```text
+src/
+├── app/
+│   ├── api/cite/route.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── citation-converter.tsx
+│   └── ui/
+├── hooks/
+│   └── use-citation-converter.ts
+└── lib/
+    ├── citation-service.ts
+    ├── citations.ts
+    └── utils.ts
+```
+
+## 資料與引用格式
+
+Metadata 與格式化結果由 [PapersFlow](https://papersflow.ai/tools/doi-converter) 提供。產生的引用應在正式投稿前依目標期刊或學校採用的 style guide 複核。
+
+## License
+
+[MIT](LICENSE)
