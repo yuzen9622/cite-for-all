@@ -1,22 +1,29 @@
 {
   "name": "cite-for-all",
   "version": "0.1.0",
-  "description": "Open-source DOI and paper-title citation converter.",
+  "description": "🚀 Open-source DOI and paper-title citation converter for APA, MLA, BibTeX, and more 📚",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@10.30.0",
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=20.19.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "benchmark:citation": "node scripts/benchmark-citation-engines.mjs",
+    "sync:csl": "node scripts/sync-csl-assets.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@citation-js/core": "0.8.2",
+    "@citation-js/plugin-bibtex": "0.8.2",
+    "@citation-js/plugin-csl": "0.8.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",
@@ -35,7 +42,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.10"
   },
   "pnpm": {
     "overrides": {
