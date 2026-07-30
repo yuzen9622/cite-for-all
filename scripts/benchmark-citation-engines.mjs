@@ -4,7 +4,7 @@ import { performance } from "node:perf_hooks"
 
 const PAPERSFLOW_URL = "https://doxa.papersflow.ai/api/public/cite"
 
-const cases = [
+const allCases = [
   {
     id: "kulik-doi",
     input: "10.3102/0034654315581420",
@@ -50,6 +50,136 @@ const cases = [
     expectedDoi: "10.5281/zenodo.3727209",
   },
   {
+    id: "zenodo-title",
+    input: "Advanced Terrestrial Simulator (ATS) v0.88",
+    valid: true,
+    expectedDoi: "10.5281/zenodo.3727209",
+  },
+  {
+    id: "chi-doi",
+    input: "10.1145/3290605.3300233",
+    valid: true,
+    expectedDoi: "10.1145/3290605.3300233",
+  },
+  {
+    id: "chi-title",
+    input: "Guidelines for Human-AI Interaction",
+    valid: true,
+    expectedDoi: "10.1145/3290605.3300233",
+  },
+  {
+    id: "science-doi",
+    input: "10.1126/science.169.3946.635",
+    valid: true,
+    expectedDoi: "10.1126/science.169.3946.635",
+  },
+  {
+    id: "science-title",
+    input:
+      "The Structure of Ordinary Water: New data and interpretations are yielding new insights into this fascinating substance.",
+    valid: true,
+    expectedDoi: "10.1126/science.169.3946.635",
+  },
+  {
+    id: "chb-doi",
+    input: "10.1016/j.chb.2020.106552",
+    valid: true,
+    expectedDoi: "10.1016/j.chb.2020.106552",
+  },
+  {
+    id: "chb-title",
+    input:
+      "Technology-related knowledge, skills, and attitudes of pre- and in-service teachers: The current situation and emerging trends",
+    valid: true,
+    expectedDoi: "10.1016/j.chb.2020.106552",
+  },
+  {
+    id: "plos-doi",
+    input: "10.1371/journal.pone.0115069",
+    valid: true,
+    expectedDoi: "10.1371/journal.pone.0115069",
+  },
+  {
+    id: "plos-title",
+    input:
+      "An Efficiency Comparison of Document Preparation Systems Used in Academic Research and Development",
+    valid: true,
+    expectedDoi: "10.1371/journal.pone.0115069",
+  },
+  {
+    id: "education-doi",
+    input: "10.3390/educsci13020124",
+    valid: true,
+    expectedDoi: "10.3390/educsci13020124",
+  },
+  {
+    id: "education-title",
+    input:
+      "The Effectiveness of an Online Language Course during the COVID-19 Pandemic: Students’ Perceptions and Hard Evidence",
+    valid: true,
+    expectedDoi: "10.3390/educsci13020124",
+  },
+  {
+    id: "arxiv-doi",
+    input: "10.48550/arXiv.1706.03762",
+    valid: true,
+    expectedDoi: "10.48550/arxiv.1706.03762",
+  },
+  {
+    id: "arxiv-title",
+    input: "Attention Is All You Need",
+    valid: false,
+  },
+  {
+    id: "graphic-doi",
+    input: "10.5281/zenodo.10084110",
+    valid: true,
+    expectedDoi: "10.5281/zenodo.10084110",
+  },
+  {
+    id: "graphic-title",
+    input:
+      "FIGURE 7. Psychotria ternatifolia. A in Additions to the rubiaceous flora of Papua New Guinea: Psychotria stolonifera and P. ternatifolia, two remarkable species from the Muller limestone",
+    valid: true,
+    expectedDoi: "10.5281/zenodo.10084110",
+  },
+  {
+    id: "software-doi",
+    input: "10.6084/m9.figshare.9782777",
+    valid: true,
+    expectedDoi: "10.6084/m9.figshare.9782777",
+  },
+  {
+    id: "software-title",
+    input: "Binder-ready openSenseMap Analysis on Figshare",
+    valid: true,
+    expectedDoi: "10.6084/m9.figshare.9782777",
+  },
+  {
+    id: "dryad-doi",
+    input: "10.5061/dryad.5d23f",
+    valid: true,
+    expectedDoi: "10.5061/dryad.5d23f",
+  },
+  {
+    id: "dryad-title",
+    input: "Data from: Climate, demography, and lek stability in an Amazonian bird",
+    valid: true,
+    expectedDoi: "10.5061/dryad.5d23f",
+  },
+  {
+    id: "dataverse-doi",
+    input: "10.18738/T8/EG0LJI",
+    valid: true,
+    expectedDoi: "10.18738/t8/eg0lji",
+  },
+  {
+    id: "dataverse-title",
+    input: "Raw BDF Data",
+    valid: true,
+    expectedDoi: "10.18738/t8/eg0lji",
+  },
+  {
     id: "missing-doi",
     input: "10.9999/definitely-not-a-real-doi",
     valid: false,
@@ -65,6 +195,11 @@ const cases = [
     input: "Effectiveness of intelligent tutoring systems",
     valid: false,
   },
+  {
+    id: "ambiguous-title",
+    input: "Editorial",
+    valid: false,
+  },
 ]
 
 function option(name, fallback) {
@@ -75,9 +210,30 @@ function option(name, fallback) {
 const rounds = Number.parseInt(option("--rounds", "3"), 10)
 const selfUrl = option("--self-url", "http://127.0.0.1:3100/api/cite")
 const outputPath = option("--output", "")
+const suite = option("--suite", "broad")
+const coreCaseIds = new Set([
+  "kulik-doi",
+  "kulik-title",
+  "mao-doi",
+  "mao-title",
+  "nature-doi",
+  "nature-title",
+  "zenodo-doi",
+  "missing-doi",
+  "typo-title",
+  "incomplete-title",
+])
+const cases =
+  suite === "core"
+    ? allCases.filter((testCase) => coreCaseIds.has(testCase.id))
+    : allCases
 
 if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) {
   throw new Error("--rounds must be an integer from 1 to 10")
+}
+
+if (!["core", "broad"].includes(suite)) {
+  throw new Error("--suite must be either core or broad")
 }
 
 function canonicalDoi(value) {
@@ -138,7 +294,11 @@ function normalizedResult(engine, payload) {
   }
 }
 
-function classifyOutcome(testCase, normalized) {
+function classifyOutcome(testCase, normalized, httpStatus) {
+  if (httpStatus === 408 || httpStatus === 429 || httpStatus >= 500) {
+    return "upstream-error"
+  }
+
   const returnedDoi = canonicalDoi(normalized.data?.metadata?.doi)
 
   if (!testCase.valid) {
@@ -184,7 +344,7 @@ async function measure(engine, testCase, round) {
       httpStatus: response.status,
       elapsedMs,
       success: normalized.success,
-      outcome: classifyOutcome(testCase, normalized),
+      outcome: classifyOutcome(testCase, normalized, response.status),
       returnedDoi: canonicalDoi(normalized.data?.metadata?.doi),
       returnedTitle: normalized.data?.metadata?.title ?? null,
       formatCount: normalized.success
@@ -234,7 +394,20 @@ function summarize(engine, results) {
     )
   })
 
+  const unavailableCount = engineResults.filter((result) =>
+    ["upstream-error", "transport-error"].includes(result.outcome)
+  ).length
+
   return {
+    availability: {
+      available: engineResults.length - unavailableCount,
+      total: engineResults.length,
+      rate: Number(
+        ((engineResults.length - unavailableCount) / engineResults.length).toFixed(
+          4
+        )
+      ),
+    },
     validCaseCoverage: {
       covered: coveredCases.length,
       total: validCases.length,
@@ -252,6 +425,7 @@ function summarize(engine, results) {
         "false-positive",
         "miss",
         "wrong-match",
+        "upstream-error",
         "transport-error",
       ].map((outcome) => [
         outcome,
@@ -299,6 +473,7 @@ for (let round = 1; round <= rounds; round += 1) {
 const report = {
   generatedAt: new Date().toISOString(),
   methodology: {
+    suite,
     rounds,
     requestMode: "sequential; engine order alternates for each case",
     timeoutMs: 30_000,
