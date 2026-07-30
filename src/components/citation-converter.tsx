@@ -53,7 +53,7 @@ export function CitationConverter() {
           size="sm"
           render={
             <a
-              href="https://papersflow.ai/tools/doi-converter"
+              href="https://citationstyles.org/"
               target="_blank"
               rel="noreferrer"
             />
@@ -61,7 +61,11 @@ export function CitationConverter() {
           className="text-muted-foreground"
         >
           <span className="size-2 rounded-full bg-[#5d9a56] shadow-[0_0_0_5px_rgb(93_154_86/0.12)]" />
-          <span className="hidden sm:inline">Powered by PapersFlow</span>
+          <span className="hidden md:inline">
+            (c) Frank Bennett · citeproc-js implements the Citation Style
+            Language
+          </span>
+          <span className="md:hidden">(c) Frank Bennett · CSL</span>
           <ExternalLink className="size-3.5" />
         </Button>
       </header>
@@ -85,7 +89,8 @@ export function CitationConverter() {
         </div>
         <p className="mb-1 max-w-2xl text-base leading-7 text-muted-foreground">
           貼上 DOI、DOI 網址或完整論文標題，即可取得 APA 7th、MLA
-          9、Chicago、Harvard、IEEE、Vancouver 與 BibTeX。
+          9、Chicago Author–Date、Harvard Cite Them Right、IEEE、Vancouver 與
+          BibTeX。
         </p>
       </section>
 
@@ -208,7 +213,7 @@ export function CitationConverter() {
                     </span>
                     <h2 className="font-heading text-2xl font-semibold">
                       {converter.successfulResults.length} 筆完成
-                      {failedCount > 0 ? `，${failedCount} 筆失敗` : ""}
+                      {failedCount > 0 ? `，${failedCount} 筆未顯示` : ""}
                     </h2>
                   </div>
                   {converter.successfulResults.length > 0 && (
@@ -252,59 +257,43 @@ export function CitationConverter() {
                   )}
                 </div>
 
-                <Tabs
-                  value={converter.style}
-                  onValueChange={(value) =>
-                    converter.setStyle(value as CitationStyle)
-                  }
-                  className="my-5"
-                >
-                  <TabsList className="grid h-auto w-full grid-cols-2 gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0 sm:grid-cols-4 xl:grid-cols-7">
-                    {STYLE_OPTIONS.map((option) => (
-                      <TabsTrigger
-                        key={option.id}
-                        value={option.id}
-                        className="h-11 rounded-none border-r border-b px-2 text-xs font-extrabold data-active:bg-primary data-active:text-primary-foreground"
-                      >
-                        {option.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+                {failedCount > 0 && (
+                  <p
+                    className="mt-5 border-l-4 border-[#b84025] bg-[#fff6ef] px-4 py-3 text-sm leading-6 text-muted-foreground"
+                    role="status"
+                  >
+                    {failedCount} 筆輸入找不到完全相符且唯一的文獻，為避免誤引，未產生也未顯示引用。
+                  </p>
+                )}
+
+                {converter.successfulResults.length > 0 && (
+                  <Tabs
+                    value={converter.style}
+                    onValueChange={(value) =>
+                      converter.setStyle(value as CitationStyle)
+                    }
+                    className="my-5"
+                  >
+                    <TabsList className="grid h-auto w-full grid-cols-2 gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0 sm:grid-cols-4 xl:grid-cols-7">
+                      {STYLE_OPTIONS.map((option) => (
+                        <TabsTrigger
+                          key={option.id}
+                          value={option.id}
+                          className="h-11 rounded-none border-r border-b px-2 text-xs font-extrabold data-active:bg-primary data-active:text-primary-foreground"
+                        >
+                          {option.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                )}
 
                 <div className="grid gap-3.5">
-                  {converter.results.map((result, index) => {
-                    if (!result.success) {
-                      return (
-                        <Card
-                          key={`${result.input}-${index}`}
-                          className="gap-0 rounded-none border border-destructive/50 bg-[#fff6ef] py-0 shadow-none"
-                        >
-                          <CardHeader className="rounded-none border-b px-4 py-3.5">
-                            <Badge
-                              variant="destructive"
-                              className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em]"
-                            >
-                              ITEM {String(index + 1).padStart(2, "0")} · ERROR
-                            </Badge>
-                            <CardTitle className="text-sm font-extrabold">
-                              {result.input}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 font-heading text-[15px] leading-7">
-                            {result.error}
-                          </CardContent>
-                        </Card>
-                      )
-                    }
-
-                    const successIndex = converter.results
-                      .slice(0, index)
-                      .filter((item) => item.success).length
+                  {converter.successfulResults.map((result, index) => {
                     const output = converter.citationText(
                       result,
                       converter.style,
-                      successIndex
+                      index
                     )
                     const copyId = `item-${index}`
 
@@ -319,7 +308,8 @@ export function CitationConverter() {
                             className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
                           >
                             ITEM {String(index + 1).padStart(2, "0")} ·{" "}
-                            {result.data.inputType.toUpperCase()}
+                            {result.data.inputType.toUpperCase()} ·{" "}
+                            {result.data.provenance.provider.toUpperCase()}
                           </Badge>
                           <CardTitle className="pr-14 text-sm font-extrabold">
                             {result.data.metadata.title}
@@ -400,7 +390,14 @@ export function CitationConverter() {
 
       <footer className="flex flex-col justify-between gap-2 pt-5 text-[11px] text-muted-foreground sm:flex-row">
         <span>© {new Date().getFullYear()} Cite for All · MIT License</span>
-        <span>Metadata & formatting by PapersFlow · 請於投稿前複核</span>
+        <a
+          href="https://citationstyles.org/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline decoration-border underline-offset-4 hover:text-foreground"
+        >
+          (c) Frank Bennett · citeproc-js implements the Citation Style Language
+        </a>
       </footer>
     </main>
   )
