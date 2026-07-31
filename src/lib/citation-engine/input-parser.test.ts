@@ -32,3 +32,40 @@ describe("DOI input parsing", () => {
     })
   })
 })
+
+describe("title input parsing", () => {
+  const title = "Learning versus performance: An integrative review."
+
+  it("extracts the title from an APA reference without a DOI", () => {
+    expect(
+      classifyInput(
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. *Perspectives on Psychological Science, 10*(2), 176–199."
+      )
+    ).toEqual({ kind: "title", value: title })
+
+    expect(
+      classifyInput(
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. Perspectives on Psychological Science, 10(2), 176–199."
+      )
+    ).toEqual({ kind: "title", value: title })
+  })
+
+  it("extracts the title when an APA reference stops after the title", () => {
+    expect(
+      classifyInput(
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review."
+      )
+    ).toEqual({ kind: "title", value: title })
+  })
+
+  it("keeps plain titles and non-author year prefixes unchanged", () => {
+    expect(classifyInput(title)).toEqual({ kind: "title", value: title })
+
+    const titleBeginningWithYear =
+      "History of education (2015). Learning versus performance: An integrative review."
+    expect(classifyInput(titleBeginningWithYear)).toEqual({
+      kind: "title",
+      value: titleBeginningWithYear,
+    })
+  })
+})
