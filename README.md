@@ -130,6 +130,18 @@ docker run -d \
   cite-for-all
 ```
 
+### ☁️ Cloudflare Tunnel Integration
+
+Expose your container securely to the internet without public IP or router configuration:
+
+1. Create a tunnel in [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/) (**Networks** ➔ **Tunnels**).
+2. Point the tunnel's Public Hostname service to `http://cite-for-all:3000`.
+3. Add your token to `.env`:
+   ```env
+   TUNNEL_TOKEN=eyJh...
+   ```
+4. Run `docker compose up -d`. The `cloudflared` service will automatically launch and connect.
+
 ### Environment Variables in Docker
 
 Environment variables can be defined in `.env` (which `docker-compose.yml` automatically reads) or passed via the `-e` flag:
@@ -141,6 +153,7 @@ Environment variables can be defined in `.env` (which `docker-compose.yml` autom
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Base URL for site metadata & canonical links |
 | `CROSSREF_MAILTO` | *(Optional)* | Email passed to Crossref polite pool |
 | `OPENALEX_API_KEY` | *(Optional)* | Key for OpenAlex exact-title fallback |
+| `TUNNEL_TOKEN` | *(Optional)* | Cloudflare Tunnel authentication token |
 
 ---
 
@@ -228,6 +241,7 @@ PORT=3000
 NEXT_PUBLIC_SITE_URL=https://your-domain.example
 CROSSREF_MAILTO=you@example.com
 OPENALEX_API_KEY=
+TUNNEL_TOKEN=
 ```
 
 - `NODE_ENV` defaults to `production`.
@@ -235,6 +249,7 @@ OPENALEX_API_KEY=
 - `NEXT_PUBLIC_SITE_URL` defaults to `http://localhost:3000`.
 - `CROSSREF_MAILTO` is recommended so Crossref can identify requests and route them through its polite pool.
 - `OPENALEX_API_KEY` is optional and only enables an additional exact-title fallback.
+- `TUNNEL_TOKEN` is optional for deploying Cloudflare Tunnel automatically.
 
 ---
 
