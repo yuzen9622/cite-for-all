@@ -19,3 +19,16 @@ services:
     env_file:
       - path: .env
         required: false
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cite-for-all-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-}
+    depends_on:
+      - cite-for-all
+    env_file:
+      - path: .env
+        required: false
