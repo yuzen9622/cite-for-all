@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import {
   citationText,
+  formatRis,
   parseCitationInputs,
   type CitationResult,
   type CitationStyle,
@@ -18,6 +19,16 @@ const EXAMPLES: Record<InputMode, string> = {
 interface ApiResponse {
   results?: CitationResult[]
   error?: string
+}
+
+function downloadTextFile(content: string, filename: string, type: string) {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 export function useCitationConverter() {
@@ -109,15 +120,19 @@ export function useCitationConverter() {
 
   function downloadAll() {
     const extension = style === "bibtex" ? "bib" : "txt"
-    const blob = new Blob([allCitationText()], {
-      type: "text/plain;charset=utf-8",
-    })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `citations-${style}.${extension}`
-    anchor.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      allCitationText(),
+      `citations-${style}.${extension}`,
+      "text/plain;charset=utf-8"
+    )
+  }
+
+  function downloadRis() {
+    downloadTextFile(
+      formatRis(successfulResults.map((result) => result.data.metadata)),
+      "citations.ris",
+      "application/x-research-info-systems;charset=utf-8"
+    )
   }
 
   return {
@@ -139,5 +154,6 @@ export function useCitationConverter() {
     allCitationText,
     copyText,
     downloadAll,
+    downloadRis,
   }
 }

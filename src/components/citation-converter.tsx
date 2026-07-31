@@ -160,7 +160,7 @@ export function CitationConverter() {
                   : "10.3102/0034654315581420\n10.1109/tlt.2023.3259013\n或每行貼上一個完整 paper title"
               }
               spellCheck={false}
-              className="min-h-[270px] resize-y rounded-none bg-[linear-gradient(rgb(20_36_31/0.055)_1px,transparent_1px)] bg-[length:100%_32px] bg-card px-5 py-4 font-mono text-sm leading-8 shadow-none"
+              className="field-sizing-fixed h-[270px] min-h-[270px] resize-none overflow-auto rounded-none bg-[linear-gradient(rgb(20_36_31/0.055)_1px,transparent_1px)] bg-[length:100%_32px] bg-card px-5 py-4 font-mono text-sm leading-8 shadow-none"
             />
 
             <div className="mt-2.5 flex min-h-7 justify-between gap-4 text-xs text-muted-foreground">
@@ -200,7 +200,7 @@ export function CitationConverter() {
             </p>
           </section>
 
-          <section className="bg-card/60 p-4 sm:p-7">
+          <section className="min-w-0 max-w-full overflow-hidden bg-card/60 p-4 sm:p-7">
             {converter.results.length ? (
               <>
                 <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
@@ -214,7 +214,7 @@ export function CitationConverter() {
                     </h2>
                   </div>
                   {converter.successfulResults.length > 0 && (
-                    <div className="flex w-full gap-2 sm:w-auto">
+                    <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                       <Tooltip>
                         <TooltipTrigger
                           render={
@@ -249,6 +249,16 @@ export function CitationConverter() {
                         <Download />
                         下載{" "}
                         {converter.style === "bibtex" ? ".bib" : ".txt"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={converter.downloadRis}
+                        className="flex-1 rounded-none sm:flex-none"
+                      >
+                        <Download />
+                        下載 .ris
                       </Button>
                     </div>
                   )}
@@ -288,7 +298,7 @@ export function CitationConverter() {
                   </Tabs>
                 )}
 
-                <div className="grid gap-3.5">
+                <div className="grid max-h-[min(28rem,60vh)] min-w-0 max-w-full gap-3.5 overflow-auto overscroll-contain pr-1">
                   {converter.successfulResults.map((result, index) => {
                     const output = converter.citationText(
                       result,
@@ -300,9 +310,9 @@ export function CitationConverter() {
                     return (
                       <Card
                         key={`${result.input}-${index}`}
-                        className="gap-0 rounded-none border bg-card py-0 shadow-none"
+                        className="min-w-0 max-w-full gap-0 rounded-none border bg-card py-0 shadow-none"
                       >
-                        <CardHeader className="rounded-none border-b px-4 py-3.5">
+                        <CardHeader className="min-w-0 rounded-none border-b px-4 py-3.5">
                           <Badge
                             variant="outline"
                             className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
@@ -311,10 +321,10 @@ export function CitationConverter() {
                             {result.data.inputType.toUpperCase()} ·{" "}
                             {result.data.provenance.provider.toUpperCase()}
                           </Badge>
-                          <CardTitle className="pr-14 text-sm font-extrabold">
+                          <CardTitle className="min-w-0 pr-14 text-sm font-extrabold [overflow-wrap:anywhere]">
                             {result.data.metadata.title}
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                             {[
                               result.data.metadata.year,
                               result.data.metadata.journal,
@@ -352,10 +362,10 @@ export function CitationConverter() {
                             </Tooltip>
                           </CardAction>
                         </CardHeader>
-                        <CardContent className="p-0">
+                        <CardContent className="min-w-0 max-w-full overflow-auto p-0">
                           <pre
                             className={cn(
-                              "m-0 [overflow-wrap:anywhere] whitespace-pre-wrap p-4 font-heading text-[15px] leading-7",
+                              "m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] whitespace-pre-wrap p-4 font-heading text-[15px] leading-7",
                               converter.style === "bibtex" &&
                                 "overflow-x-auto font-mono text-xs leading-6 whitespace-pre"
                             )}
