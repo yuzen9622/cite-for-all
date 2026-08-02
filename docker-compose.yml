@@ -1,6 +1,22 @@
 name: cite-for-all
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: cite-for-all-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-cite_for_all}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   cite-for-all:
     build:
       context: .
@@ -14,11 +30,16 @@ services:
       - PORT=${PORT:-3000}
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/cite_for_all}
+      - AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-true}
       - CROSSREF_MAILTO=${CROSSREF_MAILTO:-}
       - OPENALEX_API_KEY=${OPENALEX_API_KEY:-}
     env_file:
       - path: .env
         required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -32,3 +53,6 @@ services:
     env_file:
       - path: .env
         required: false
+
+volumes:
+  pgdata:
