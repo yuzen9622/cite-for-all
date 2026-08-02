@@ -104,7 +104,7 @@ export function SignInDialog() {
         render={
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             className="rounded-none"
           />

@@ -21,7 +21,13 @@ function DialogBackdrop({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-backdrop"
-      className={cn("fixed inset-0 z-50 bg-foreground/50", className)}
+      className={cn(
+        "fixed inset-0 z-50 bg-foreground/50",
+        "transition-opacity duration-200 ease-out",
+        "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+        "motion-reduce:transition-none",
+        className
+      )}
       {...props}
     />
   )
