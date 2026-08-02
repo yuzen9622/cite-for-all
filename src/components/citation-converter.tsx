@@ -34,8 +34,7 @@ import { cn } from "@/lib/utils"
 
 export function CitationConverter() {
   const converter = useCitationConverter()
-  const failedCount =
-    converter.results.length - converter.successfulResults.length
+  const failedCount = converter.failedResults.length
 
   return (
     <main className="mx-auto w-full max-w-[1480px] px-3 pb-10 sm:px-7">
@@ -116,7 +115,7 @@ export function CitationConverter() {
           </Tabs>
           <p className="hidden text-xs text-muted-foreground sm:block">
             {converter.mode === "batch"
-              ? "每行一筆，單次最多 15 筆"
+              ? `每行一筆，單次最多 ${converter.MAX_BATCH_SIZE} 筆`
               : "支援 DOI、DOI URL 或 paper title"}
           </p>
         </CardHeader>
@@ -265,12 +264,27 @@ export function CitationConverter() {
                 </div>
 
                 {failedCount > 0 && (
-                  <p
+                  <div
                     className="mt-5 border-l-4 border-[#b84025] bg-[#fff6ef] px-4 py-3 text-sm leading-6 text-muted-foreground"
                     role="status"
                   >
-                    {failedCount} 筆輸入找不到完全相符且唯一的文獻，為避免誤引，未產生也未顯示引用。
-                  </p>
+                    <p>
+                      {failedCount} 筆輸入找不到完全相符且唯一的文獻，為避免誤引，未產生引用：
+                    </p>
+                    <ul className="mt-2 space-y-1.5">
+                      {converter.failedResults.map((failure) => (
+                        <li key={failure.order} className="break-all">
+                          <span>第 {failure.order} 筆：</span>
+                          <span className="font-mono text-xs">
+                            {failure.input}
+                          </span>
+                          <span className="block text-muted-foreground">
+                            {failure.message}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
 
                 {converter.successfulResults.length > 0 && (
@@ -298,9 +312,32 @@ export function CitationConverter() {
                   </Tabs>
                 )}
 
+                {converter.successfulResults.length > 0 &&
+                  (converter.style === "ieee" ||
+                    converter.style === "vancouver") && (
+                    <div className="mb-4 flex items-center gap-3 text-sm">
+                      <label htmlFor="citation-start-number">起始編號</label>
+                      <input
+                        id="citation-start-number"
+                        type="number"
+                        min={1}
+                        max={9999}
+                        step={1}
+                        value={converter.startNumber}
+                        onChange={(event) =>
+                          converter.updateStartNumber(event.target.value)
+                        }
+                        className="w-24 rounded-none border font-mono text-sm"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        用於接續既有參考文獻清單的編號
+                      </span>
+                    </div>
+                  )}
+
                 <div className="grid max-h-[min(28rem,60vh)] min-w-0 max-w-full gap-3.5 overflow-auto overscroll-contain pr-1">
                   {converter.successfulResults.map((result, index) => {
-                    const output = converter.citationText(
+                    const output = converter.citationTextAt(
                       result,
                       converter.style,
                       index
@@ -317,7 +354,7 @@ export function CitationConverter() {
                             variant="outline"
                             className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
                           >
-                            ITEM {String(index + 1).padStart(2, "0")} ·{" "}
+                            ITEM {String(index + converter.startNumber).padStart(2, "0")} ·{" "}
                             {result.data.inputType.toUpperCase()} ·{" "}
                             {result.data.provenance.provider.toUpperCase()}
                           </Badge>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import {
+  MAX_BATCH_SIZE,
   citationText,
   formatRis,
   parseCitationInputs,
@@ -35,6 +36,7 @@ export function useCitationConverter() {
   const [mode, setMode] = useState<InputMode>("single")
   const [rawInput, setRawInput] = useState("")
   const [style, setStyle] = useState<CitationStyle>("apa")
+  const [startNumber, setStartNumber] = useState(1)
   const [results, setResults] = useState<CitationResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -42,6 +44,21 @@ export function useCitationConverter() {
 
   const parsedInputs = useMemo(() => parseCitationInputs(rawInput), [rawInput])
   const successfulResults = results.filter((result) => result.success)
+  const failedResults = results
+    .map((result, index) => ({ result, index }))
+    .filter(
+      (
+        entry
+      ): entry is {
+        result: Extract<CitationResult, { success: false }>
+        index: number
+      } => !entry.result.success
+    )
+    .map(({ result, index }) => ({
+      order: index + 1,
+      input: result.input,
+      message: result.error,
+    }))
 
   function changeMode(nextMode: InputMode) {
     setMode(nextMode)
@@ -73,8 +90,8 @@ export function useCitationConverter() {
       return
     }
 
-    if (parsedInputs.length > 15) {
-      setError("單次最多可轉換 15 筆文獻。")
+    if (parsedInputs.length > MAX_BATCH_SIZE) {
+      setError(`單次最多可轉換 ${MAX_BATCH_SIZE} 筆文獻。`)
       return
     }
 
@@ -102,9 +119,31 @@ export function useCitationConverter() {
     }
   }
 
+  function updateStartNumber(value: string) {
+    if (value === "") {
+      setStartNumber(1)
+      return
+    }
+
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return
+    }
+
+    setStartNumber(Math.min(parsed, 9999))
+  }
+
+  function citationTextAt(
+    result: Extract<CitationResult, { success: true }>,
+    style: CitationStyle,
+    index: number
+  ) {
+    return citationText(result, style, index + startNumber - 1)
+  }
+
   function allCitationText() {
     return successfulResults
-      .map((result, index) => citationText(result, style, index))
+      .map((result, index) => citationTextAt(result, style, index))
       .join("\n\n")
   }
 
@@ -145,12 +184,17 @@ export function useCitationConverter() {
     copied,
     parsedInputs,
     successfulResults,
+    failedResults,
+    MAX_BATCH_SIZE,
     changeMode,
     updateInput,
     loadExample,
     setStyle,
     convert,
     citationText,
+    citationTextAt,
+    startNumber,
+    updateStartNumber,
     allCitationText,
     copyText,
     downloadAll,
