@@ -1,3 +1,5 @@
+import type { CslItem } from "@/lib/citation-engine/types"
+
 export const MAX_BATCH_SIZE = 30
 
 export const STYLE_OPTIONS = [
@@ -30,6 +32,7 @@ export interface CitationData {
   success: true
   inputType: "doi" | "title"
   metadata: CitationMetadata
+  csl: CslItem
   citations: Record<Exclude<CitationStyle, "bibtex">, string>
   bibtex: string
   provenance: {
@@ -103,9 +106,9 @@ function cleanRisValue(value: string | number) {
 function appendRisField(
   lines: string[],
   tag: string,
-  value: string | number | undefined
+  value: string | number | null | undefined
 ) {
-  if (value === undefined) {
+  if (value == null) {
     return
   }
 
@@ -115,7 +118,7 @@ function appendRisField(
   }
 }
 
-function risPages(pages: string | undefined) {
+function risPages(pages: string | null | undefined) {
   const cleaned = pages ? cleanRisValue(pages) : ""
   const range = cleaned.match(/^(.+?)\s*[-–—]\s*(.+)$/)
 

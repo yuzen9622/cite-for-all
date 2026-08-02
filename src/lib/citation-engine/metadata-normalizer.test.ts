@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
+import type { CitationMetadata } from "@/lib/citations"
 import {
+  applyMetadataToCsl,
   crossrefRecord,
   dataciteRecord,
   recordFromCsl,
@@ -72,5 +74,68 @@ describe("metadata normalization", () => {
     expect(result?.csl.issued).toEqual({ "date-parts": [[2016, 3]] })
     expect(result?.csl).not.toHaveProperty("reference")
     expect(result?.csl).not.toHaveProperty("license")
+  })
+
+  it("merges editable metadata while preserving omitted CSL fields", () => {
+    const base = {
+      id: "source-id",
+      type: "article-journal",
+      title: "Original title",
+      author: [{ given: "Ada", family: "Lovelace" }],
+      issued: { "date-parts": [[2020, 4, 2]] },
+      "container-title": "Original journal",
+      DOI: "10.1000/original",
+      ISSN: "1234-5678",
+    }
+
+    const result = applyMetadataToCsl(base, {
+      title: "Edited title",
+      authors: ["Doe, Jane"],
+    })
+
+    expect(result).toMatchObject({
+      id: "source-id",
+      title: "Edited title",
+      author: [{ family: "Doe", given: "Jane" }],
+      issued: { "date-parts": [[2020, 4, 2]] },
+      "container-title": "Original journal",
+      DOI: "10.1000/original",
+      ISSN: "1234-5678",
+    })
+  })
+
+  it("clears optional fields only when empty or null is explicit", () => {
+    const result = applyMetadataToCsl(
+      {
+        id: "source-id",
+        type: "article-journal",
+        title: "Original title",
+        issued: { "date-parts": [[2020]] },
+        "container-title": "Original journal",
+        DOI: "10.1000/original",
+      },
+      {
+        title: "Original title",
+        authors: [],
+        year: null,
+        journal: "",
+        doi: "https://doi.org/10.1000/NEW.",
+      } as unknown as CitationMetadata
+    )
+
+    expect(result).not.toHaveProperty("author")
+    expect(result).not.toHaveProperty("issued")
+    expect(result).not.toHaveProperty("container-title")
+    expect(result.DOI).toBe("10.1000/new")
+    expect(result.type).toBe("article-journal")
+  })
+
+  it("never drops the required CSL type", () => {
+    const result = applyMetadataToCsl(
+      { id: "source-id", type: "article-journal", title: "Title" },
+      { title: "Title", authors: [], type: null } as unknown as CitationMetadata
+    )
+
+    expect(result.type).toBe("article-journal")
   })
 })

@@ -1,5 +1,6 @@
 import { normalizeDoi } from "@/lib/citation-engine/input-parser"
 import { stripMarkup } from "@/lib/citation-engine/title-matcher"
+import type { CitationMetadata } from "@/lib/citations"
 import type {
   CslDate,
   CslItem,
@@ -175,6 +176,119 @@ export function recordFromCsl(
       type: csl.type,
     },
   }
+}
+
+function nameFromDisplayName(value: string) {
+  const name = value.trim()
+  if (!name) {
+    return null
+  }
+
+  if (name.includes(",")) {
+    const [family, ...givenParts] = name.split(",")
+    const given = givenParts.join(",").trim()
+    return given ? { family: family.trim(), given } : { family: family.trim() }
+  }
+
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length < 2) {
+    return { literal: name }
+  }
+
+  return {
+    family: parts.at(-1),
+    given: parts.slice(0, -1).join(" "),
+  }
+}
+
+function setOptionalCslField(
+  target: CslItem,
+  key: keyof CslItem,
+  value: unknown
+) {
+  if (value === null || value === "") {
+    delete target[key]
+    return
+  }
+
+  target[key] = value as never
+}
+
+function editableValue(metadata: CitationMetadata, key: string) {
+  return (metadata as unknown as Record<string, unknown>)[key]
+}
+
+function editableString(metadata: CitationMetadata, key: string) {
+  const value = editableValue(metadata, key)
+  return typeof value === "string" || value === null ? value : undefined
+}
+
+export function applyMetadataToCsl(
+  base: CslItem,
+  metadata: CitationMetadata
+): CslItem {
+  const next: CslItem = { ...base }
+  const title = editableString(metadata, "title")
+  const authorsValue = editableValue(metadata, "authors")
+
+  if (title !== null && title !== undefined && title.trim()) {
+    next.title = title.trim()
+  }
+
+  if (Array.isArray(authorsValue)) {
+    const authors = authorsValue
+      .filter((author): author is string => typeof author === "string")
+      .map(nameFromDisplayName)
+      .filter((name): name is NonNullable<typeof name> => Boolean(name))
+
+    if (authors.length) {
+      next.author = authors
+    } else {
+      delete next.author
+    }
+  }
+
+  const year = editableValue(metadata, "year")
+  if (year !== undefined) {
+    if (year === null) {
+      delete next.issued
+    } else if (typeof year === "number" && Number.isInteger(year) && year > 0) {
+      next.issued = { "date-parts": [[year]] }
+    }
+  }
+
+  const journal = editableString(metadata, "journal")
+  if (journal !== undefined) {
+    setOptionalCslField(next, "container-title", journal?.trim() ?? null)
+  }
+  const volume = editableString(metadata, "volume")
+  if (volume !== undefined) {
+    setOptionalCslField(next, "volume", volume?.trim() ?? null)
+  }
+  const issue = editableString(metadata, "issue")
+  if (issue !== undefined) {
+    setOptionalCslField(next, "issue", issue?.trim() ?? null)
+  }
+  const pages = editableString(metadata, "pages")
+  if (pages !== undefined) {
+    setOptionalCslField(next, "page", pages?.trim() ?? null)
+  }
+  const doiValue = editableString(metadata, "doi")
+  if (doiValue !== undefined) {
+    const doi = doiValue?.trim() ? normalizeDoi(doiValue) : ""
+    setOptionalCslField(next, "DOI", doi || null)
+  }
+  const publisher = editableString(metadata, "publisher")
+  if (publisher !== undefined) {
+    setOptionalCslField(next, "publisher", publisher?.trim() ?? null)
+  }
+  const url = editableString(metadata, "url")
+  if (url !== undefined) {
+    setOptionalCslField(next, "URL", url?.trim() ?? null)
+  }
+
+  next.type = editableString(metadata, "type")?.trim() || base.type || "article-journal"
+  return next
 }
 
 export function crossrefRecord(
