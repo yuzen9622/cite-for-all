@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { convertCitations } from "@/lib/citation-service"
+import { MAX_BATCH_SIZE } from "@/lib/citations"
 
-const MAX_BATCH_SIZE = 15
 const MAX_INPUT_LENGTH = 500
 
 export async function POST(request: Request) {

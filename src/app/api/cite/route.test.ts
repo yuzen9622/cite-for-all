@@ -64,14 +64,14 @@ describe("POST /api/cite", () => {
     )
   })
 
-  it("enforces the 15-item and 500-character limits", async () => {
+  it("enforces the 30-item and 500-character limits", async () => {
     const { POST } = await import("@/app/api/cite/route")
     const tooMany = await POST(
       new Request("http://localhost/api/cite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          inputs: Array.from({ length: 16 }, (_, index) => `title-${index}`),
+          inputs: Array.from({ length: 31 }, (_, index) => `title-${index}`),
         }),
       })
     )

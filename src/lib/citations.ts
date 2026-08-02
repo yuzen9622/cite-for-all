@@ -1,3 +1,5 @@
+export const MAX_BATCH_SIZE = 30
+
 export const STYLE_OPTIONS = [
   { id: "apa", label: "APA 7th" },
   { id: "mla", label: "MLA 9" },
