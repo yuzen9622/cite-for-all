@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -317,7 +318,7 @@ export function CitationConverter() {
                     converter.style === "vancouver") && (
                     <div className="mb-4 flex items-center gap-3 text-sm">
                       <label htmlFor="citation-start-number">起始編號</label>
-                      <input
+                      <Input
                         id="citation-start-number"
                         type="number"
                         min={1}
@@ -327,7 +328,7 @@ export function CitationConverter() {
                         onChange={(event) =>
                           converter.updateStartNumber(event.target.value)
                         }
-                        className="w-24 rounded-none border font-mono text-sm"
+                        className="h-9 w-24 rounded-none font-mono text-sm"
                       />
                       <span className="text-xs text-muted-foreground">
                         用於接續既有參考文獻清單的編號
