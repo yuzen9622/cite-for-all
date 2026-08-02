@@ -34,7 +34,14 @@ describe("POST /api/cite", () => {
 
   it("returns the backward-compatible result envelope and summary", async () => {
     convertCitations.mockResolvedValue([
-      { success: true, input: "found", data: { success: true } },
+      {
+        success: true,
+        input: "found",
+        data: {
+          success: true,
+          csl: { id: "found", type: "article-journal", title: "Found" },
+        },
+      },
       {
         success: false,
         input: "missing",
@@ -55,7 +62,15 @@ describe("POST /api/cite", () => {
     expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("no-store")
     await expect(response.json()).resolves.toMatchObject({
-      results: [{ success: true }, { success: false, code: "NOT_FOUND" }],
+      results: [
+        {
+          success: true,
+          data: {
+            csl: { id: "found", type: "article-journal", title: "Found" },
+          },
+        },
+        { success: false, code: "NOT_FOUND" },
+      ],
       summary: { total: 2, succeeded: 1, failed: 1 },
     })
     expect(convertCitations).toHaveBeenCalledWith(

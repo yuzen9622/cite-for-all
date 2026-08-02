@@ -4,11 +4,15 @@ import { useMemo, useState } from "react"
 import {
   MAX_BATCH_SIZE,
   citationText,
-  formatRis,
   parseCitationInputs,
   type CitationResult,
   type CitationStyle,
 } from "@/lib/citations"
+import {
+  citationExportText,
+  formatCitationExport,
+  formatRisExport,
+} from "@/lib/export-citations"
 
 export type InputMode = "single" | "batch"
 
@@ -19,6 +23,12 @@ const EXAMPLES: Record<InputMode, string> = {
 
 interface ApiResponse {
   results?: CitationResult[]
+  error?: string
+}
+
+interface SaveResponse {
+  created?: Array<unknown>
+  skipped?: Array<unknown>
   error?: string
 }
 
@@ -39,7 +49,9 @@ export function useCitationConverter() {
   const [startNumber, setStartNumber] = useState(1)
   const [results, setResults] = useState<CitationResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [saveMessage, setSaveMessage] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
 
   const parsedInputs = useMemo(() => parseCitationInputs(rawInput), [rawInput])
@@ -63,6 +75,7 @@ export function useCitationConverter() {
   function changeMode(nextMode: InputMode) {
     setMode(nextMode)
     setError("")
+    setSaveMessage("")
     setResults([])
     setRawInput("")
   }
@@ -70,15 +83,18 @@ export function useCitationConverter() {
   function updateInput(value: string) {
     setRawInput(value)
     setError("")
+    setSaveMessage("")
   }
 
   function loadExample() {
     setRawInput(EXAMPLES[mode])
     setError("")
+    setSaveMessage("")
   }
 
   async function convert() {
     setError("")
+    setSaveMessage("")
 
     if (!rawInput.trim()) {
       setError("請先貼上 DOI 或完整論文標題。")
@@ -138,13 +154,15 @@ export function useCitationConverter() {
     style: CitationStyle,
     index: number
   ) {
-    return citationText(result, style, index + startNumber - 1)
+    return citationExportText(result.data, style, index, startNumber)
   }
 
   function allCitationText() {
-    return successfulResults
-      .map((result, index) => citationTextAt(result, style, index))
-      .join("\n\n")
+    return formatCitationExport(
+      successfulResults.map((result) => result.data),
+      style,
+      startNumber
+    )
   }
 
   async function copyText(text: string, copyId: string) {
@@ -168,10 +186,57 @@ export function useCitationConverter() {
 
   function downloadRis() {
     downloadTextFile(
-      formatRis(successfulResults.map((result) => result.data.metadata)),
+      formatRisExport(successfulResults.map((result) => result.data)),
       "citations.ris",
       "application/x-research-info-systems;charset=utf-8"
     )
+  }
+
+  async function saveToProject(projectId: string) {
+    if (successfulResults.length === 0) {
+      setError("目前沒有可儲存的文獻。")
+      return false
+    }
+
+    setSaving(true)
+    setError("")
+    setSaveMessage("")
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/references`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: successfulResults.map((result) => ({
+            input: result.input,
+            inputType: result.data.inputType,
+            metadata: result.data.metadata,
+            csl: result.data.csl,
+            provenance: result.data.provenance,
+          })),
+        }),
+      })
+      const payload = (await response.json()) as SaveResponse
+
+      if (!response.ok) {
+        setError(payload.error || "儲存失敗，請稍後再試。")
+        return false
+      }
+
+      const createdCount = payload.created?.length ?? 0
+      const skippedCount = payload.skipped?.length ?? 0
+      setSaveMessage(
+        skippedCount
+          ? `已儲存 ${createdCount} 筆；${skippedCount} 筆因 DOI 重複而略過。`
+          : `已儲存 ${createdCount} 筆文獻。`
+      )
+      return true
+    } catch {
+      setError("無法連線到專案服務，請稍後再試。")
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   return {
@@ -180,7 +245,9 @@ export function useCitationConverter() {
     style,
     results,
     loading,
+    saving,
     error,
+    saveMessage,
     copied,
     parsedInputs,
     successfulResults,
@@ -199,5 +266,6 @@ export function useCitationConverter() {
     copyText,
     downloadAll,
     downloadRis,
+    saveToProject,
   }
 }

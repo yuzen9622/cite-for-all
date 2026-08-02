@@ -1,15 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import {
   ArrowRight,
   Check,
   Copy,
   Download,
-  ExternalLink,
+  FolderPlus,
   LoaderCircle,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -32,40 +33,102 @@ import {
 } from "@/hooks/use-citation-converter"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
+import { SiteHeader } from "@/components/site-header"
+
+interface ProjectSummary {
+  id: string
+  name: string
+  _count: { references: number }
+}
 
 export function CitationConverter() {
   const converter = useCitationConverter()
   const failedCount = converter.failedResults.length
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveProjects, setSaveProjects] = useState<ProjectSummary[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [newProjectName, setNewProjectName] = useState("")
+  const [saveError, setSaveError] = useState("")
+  const [loadingProjects, setLoadingProjects] = useState(false)
+
+  async function openSavePanel() {
+    setSaveOpen(true)
+    setSaveError("")
+    setLoadingProjects(true)
+
+    try {
+      const response = await fetch("/api/projects", {
+        headers: { "Cache-Control": "no-cache" },
+      })
+      const payload = (await response.json()) as {
+        projects?: ProjectSummary[]
+        error?: string
+      }
+
+      if (!response.ok || !payload.projects) {
+        setSaveError(
+          response.status === 401
+            ? "請先登入，才能儲存到專案。"
+            : payload.error || "無法載入專案。"
+        )
+        return
+      }
+
+      setSaveProjects(payload.projects)
+      setSelectedProjectId(payload.projects[0]?.id ?? "")
+    } catch {
+      setSaveError("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
+
+  async function saveCurrentResults() {
+    setSaveError("")
+    let projectId = selectedProjectId
+
+    if (!projectId) {
+      if (!newProjectName.trim()) {
+        setSaveError("請選擇專案，或輸入新專案名稱。")
+        return
+      }
+
+      try {
+        const response = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newProjectName.trim() }),
+        })
+        const payload = (await response.json()) as {
+          project?: ProjectSummary
+          error?: string
+        }
+        if (!response.ok || !payload.project) {
+          setSaveError(payload.error || "建立專案失敗。")
+          return
+        }
+        projectId = payload.project.id
+        setSaveProjects((current) => [
+          ...current,
+          payload.project as ProjectSummary,
+        ])
+        setNewProjectName("")
+      } catch {
+        setSaveError("無法連線到專案服務，請稍後再試。")
+        return
+      }
+    }
+
+    const saved = await converter.saveToProject(projectId)
+    if (saved) {
+      setSaveOpen(false)
+    }
+  }
 
   return (
-    <main className="mx-auto w-full max-w-[1480px] px-3 pb-10 sm:px-7">
-      <header className="flex min-h-16 items-center justify-between border-b border-border sm:min-h-[76px]">
-        <div
-          className="flex items-baseline gap-2 font-heading text-xl font-bold tracking-[-0.04em]"
-          aria-label="Cite for All"
-        >
-          <span>CITE</span>
-          <span className="font-mono text-accent">/</span>
-          <span>ALL</span>
-        </div>
-        <a
-          href="https://citationstyles.org/"
-          target="_blank"
-          rel="noreferrer"
-          className={cn(
-            buttonVariants({ variant: "ghost", size: "sm" }),
-            "text-muted-foreground"
-          )}
-        >
-          <span className="size-2 rounded-full bg-[#5d9a56] shadow-[0_0_0_5px_rgb(93_154_86/0.12)]" />
-          <span className="hidden md:inline">
-            (c) Frank Bennett · citeproc-js implements the Citation Style
-            Language
-          </span>
-          <span className="md:hidden">(c) Frank Bennett · CSL</span>
-          <ExternalLink className="size-3.5" />
-        </a>
-      </header>
+    <>
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-[1480px] px-3 pb-10 sm:px-7">
 
       <section
         className="grid items-end gap-5 py-10 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.55fr)] md:gap-12 md:py-16"
@@ -196,7 +259,7 @@ export function CitationConverter() {
             </Button>
 
             <p className="mt-4 text-xs leading-6 text-muted-foreground">
-              輸入內容只用於即時查詢，本站不建立帳號或儲存文獻清單。正式投稿前仍建議依目標期刊規範複核。
+              未登入時只做即時查詢；登入後可將結果儲存到自己的專案。正式投稿前仍建議依目標期刊規範複核。
             </p>
           </section>
 
@@ -260,9 +323,120 @@ export function CitationConverter() {
                         <Download />
                         下載 .ris
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void openSavePanel()}
+                        disabled={converter.saving}
+                        className="flex-1 rounded-none sm:flex-none"
+                      >
+                        <FolderPlus />
+                        儲存到專案
+                      </Button>
                     </div>
                   )}
                 </div>
+
+                {saveOpen && (
+                  <div className="mt-5 border border-foreground/30 bg-secondary/40 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-heading text-lg font-semibold">
+                          儲存到專案
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          伺服器會重新產生引用快照，不接受瀏覽器送來的格式化字串。
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSaveOpen(false)}
+                      >
+                        關閉
+                      </Button>
+                    </div>
+
+                    {loadingProjects ? (
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        正在載入專案…
+                      </p>
+                    ) : saveError ? (
+                      <div className="mt-4 space-y-3 text-sm">
+                        <p className="text-destructive" role="alert">
+                          {saveError}
+                        </p>
+                        {saveError.includes("請先登入") && (
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto px-0 font-semibold text-accent underline underline-offset-4"
+                            onClick={() => {
+                              window.location.href = "/api/auth/signin?callbackUrl=/"
+                            }}
+                          >
+                            前往登入
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        {saveProjects.length > 0 && (
+                          <label className="grid gap-1 text-sm sm:col-span-2">
+                            <span className="font-semibold">選擇既有專案</span>
+                            <select
+                              value={selectedProjectId}
+                              onChange={(event) =>
+                                setSelectedProjectId(event.target.value)
+                              }
+                              className="h-10 rounded-none border border-input bg-background px-3"
+                            >
+                              {saveProjects.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.name}（{project._count.references} 筆）
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        <label className="grid gap-1 text-sm">
+                          <span className="font-semibold">或建立新專案</span>
+                          <Input
+                            value={newProjectName}
+                            onChange={(event) => {
+                              setNewProjectName(event.target.value)
+                              if (event.target.value) {
+                                setSelectedProjectId("")
+                              }
+                            }}
+                            maxLength={100}
+                            placeholder="例如：IEEE ToE 文獻"
+                            className="rounded-none"
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          onClick={() => void saveCurrentResults()}
+                          disabled={converter.saving}
+                          className="self-end rounded-none"
+                        >
+                          {converter.saving ? "儲存中…" : "確認儲存"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {converter.saveMessage && (
+                  <p
+                    className="mt-3 text-sm font-semibold text-[#5d9a56]"
+                    role="status"
+                  >
+                    {converter.saveMessage}
+                  </p>
+                )}
 
                 {failedCount > 0 && (
                   <div
@@ -447,6 +621,7 @@ export function CitationConverter() {
           (c) Frank Bennett · citeproc-js implements the Citation Style Language
         </a>
       </footer>
-    </main>
+      </main>
+    </>
   )
 }
