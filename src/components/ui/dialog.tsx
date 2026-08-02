@@ -55,6 +55,10 @@ function DialogPopup({ className, ...props }: DialogPrimitive.Popup.Props) {
       data-slot="dialog-popup"
       className={cn(
         "relative max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-foreground/90 bg-card text-card-foreground shadow-[0_20px_60px_rgb(20_36_31/0.18)] outline-none sm:max-h-[calc(100vh-3rem)]",
+        "origin-center transition-[opacity,transform,translate] duration-200 ease-out",
+        "data-[starting-style]:translate-y-2 data-[starting-style]:scale-[0.97] data-[starting-style]:opacity-0",
+        "data-[ending-style]:translate-y-1 data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0",
+        "motion-reduce:transition-none motion-reduce:data-[ending-style]:translate-y-0 motion-reduce:data-[starting-style]:translate-y-0 motion-reduce:data-[ending-style]:scale-100 motion-reduce:data-[starting-style]:scale-100",
         className
       )}
       {...props}
