@@ -29,10 +29,10 @@
 Copy-pasting paper metadata into separate online formatters one-by-one is tedious, error-prone, and often hidden behind subscription paywalls or rate limits. Switching formatting styles usually means re-querying from scratch.
 
 ### The Solution
-`cite-for-all` is an open-source, privacy-friendly Web & API tool built with Next.js App Router. It resolves metadata from DOI.org, Crossref, and DataCite, then formats citations locally with Citation.js, citeproc-js, and official Citation Style Language (CSL) files. It does not depend on the PapersFlow API.
+`cite-for-all` is an open-source, privacy-friendly Web & API tool built with Next.js App Router. It resolves metadata from DOI.org, Crossref, and DataCite, then formats citations locally with Citation.js, citeproc-js, and official Citation Style Language (CSL) files. It does not depend on the PapersFlow API. Optional OAuth login unlocks private projects backed by PostgreSQL; anonymous conversion remains available.
 
 ### The Result
-Batch convert up to **15 papers at once**, auto-renumber numerical styles (IEEE/Vancouver), and export seamlessly to `.txt` or `.bib` files in seconds.
+Batch convert up to **30 papers at once**, auto-renumber numerical styles (IEEE/Vancouver), and export seamlessly to `.txt`, `.bib`, or `.ris` files in seconds.
 
 ---
 
@@ -41,7 +41,7 @@ Batch convert up to **15 papers at once**, auto-renumber numerical styles (IEEE/
 - 🎯 **7 Major Styles Supported**: APA 7th, MLA 9, Chicago Author–Date, Harvard Cite Them Right, IEEE, Vancouver, and BibTeX.
 - 🔎 **Strict Matching**: A DOI must match the DOI returned by the metadata provider; a title must be an exact normalized match. Typos, incomplete titles, and ambiguous titles produce no citation.
 - ⚡ **Instant Dynamic Switching**: Toggle between formats instantly without re-fetching data.
-- 📦 **Batch Conversion**: Input up to 15 DOIs or paper titles per query (one per line).
+- 📦 **Batch Conversion**: Input up to 30 DOIs or paper titles per query (one per line).
 - 🛡️ **Partial Failure Resilience**: If one DOI fails in a batch, all valid citations are still successfully returned.
 - 🔢 **Smart Re-Numbering**: Automatic sequential indexing for numerical styles like IEEE and Vancouver.
 - 💾 **One-Click Export**: Copy single citations, copy all, or download as `.txt` or native `.bib` files.
@@ -54,7 +54,7 @@ Batch convert up to **15 papers at once**, auto-renumber numerical styles (IEEE/
 | Feature / Capability | `cite-for-all` | Traditional Citation Sites | Manual Formatting |
 | :--- | :---: | :---: | :---: |
 | **Instant Multi-Format Switch** | ⚡ Instant (Local) | ❌ Requires Re-query | ❌ Re-write manually |
-| **Batch Processing** | ✅ Up to 15 items | ⚠️ Single item only | ❌ Extremely slow |
+| **Batch Processing** | ✅ Up to 30 items | ⚠️ Single item only | ❌ Extremely slow |
 | **BibTeX Export** | ✅ Native `.bib` | ❌ Rare / Paid | ❌ Manual syntax |
 | **Ad-Free & Open Source** | ✅ 100% Free & Open | ❌ Ad-heavy / Paywalled | N/A |
 | **Partial Failure Handling** | ✅ Preserves valid items | ❌ Fails entire batch | N/A |
@@ -76,9 +76,12 @@ git clone https://github.com/yuzen9622/cite-for-all.git
 cd cite-for-all
 
 # 2. Install dependencies
-pnpm install
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cite_for_all pnpm install
 
-# 3. Start development server
+# 3. Copy runtime settings and fill in OAuth values when needed
+cp .env.example .env
+
+# 4. Start development server
 pnpm dev
 ```
 
@@ -105,6 +108,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to launch 
 ### Quick Start with Docker Compose (Recommended)
 
 ```bash
+# Compose uses the service hostname for PostgreSQL.
+cp .env.example .env
+sed -i.bak 's#@localhost:5432/#@postgres:5432/#' .env
+
 # Start the application in detached mode
 docker compose up -d --build
 ```
@@ -151,6 +158,11 @@ Environment variables can be defined in `.env` (which `docker-compose.yml` autom
 | `PORT` | `3000` | HTTP listening port (maps container & host port in Docker Compose) |
 | `NODE_ENV` | `production` | Application runtime environment (`production` or `development`) |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Base URL for site metadata & canonical links |
+| `DATABASE_URL` | PostgreSQL URL | Prisma 7 database connection string; Compose uses the `postgres` hostname |
+| `AUTH_SECRET` | *(Required for login)* | Auth.js session secret |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | *(Optional)* | GitHub OAuth application credentials |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | *(Optional)* | Google OAuth application credentials |
+| `AUTH_TRUST_HOST` | `true` | Trust the host header supplied by the reverse proxy |
 | `CROSSREF_MAILTO` | *(Optional)* | Email passed to Crossref polite pool |
 | `OPENALEX_API_KEY` | *(Optional)* | Key for OpenAlex exact-title fallback |
 | `TUNNEL_TOKEN` | *(Optional)* | Cloudflare Tunnel authentication token |
@@ -161,7 +173,7 @@ Environment variables can be defined in `.env` (which `docker-compose.yml` autom
 
 ### `POST /api/cite`
 
-Query the server route with up to 15 inputs (DOIs, DOI URLs, or full paper titles). The backend handles at most three items concurrently, resolves canonical metadata, applies strict matching, and formats accepted records locally.
+Query the server route with up to 30 inputs (DOIs, DOI URLs, or full paper titles). The backend handles at most three items concurrently, resolves canonical metadata, applies strict matching, and formats accepted records locally.
 
 #### Request Body
 
@@ -174,7 +186,7 @@ Query the server route with up to 15 inputs (DOIs, DOI URLs, or full paper title
 }
 ```
 
-* **Limits**: Maximum 15 items per array, maximum 500 characters per item.
+* **Limits**: Maximum 30 items per array, maximum 500 characters per item.
 
 #### Response Example
 
@@ -190,6 +202,11 @@ Query the server route with up to 15 inputs (DOIs, DOI URLs, or full paper title
         "metadata": {
           "title": "Effectiveness of intelligent tutoring systems: A meta-analytic review",
           "doi": "10.3102/0034654315581420"
+        },
+        "csl": {
+          "id": "10.3102/0034654315581420",
+          "type": "article-journal",
+          "title": "Effectiveness of intelligent tutoring systems: A meta-analytic review"
         },
         "citations": {
           "apa": "...",
@@ -238,6 +255,13 @@ Copy `.env.example` to `.env` (for Docker/Compose) or `.env.local` (for local No
 ```bash
 NODE_ENV=production
 PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cite_for_all
+AUTH_SECRET=replace-with-a-long-random-secret
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+AUTH_TRUST_HOST=true
 NEXT_PUBLIC_SITE_URL=https://your-domain.example
 CROSSREF_MAILTO=you@example.com
 OPENALEX_API_KEY=
@@ -246,10 +270,34 @@ TUNNEL_TOKEN=
 
 - `NODE_ENV` defaults to `production`.
 - `PORT` defaults to `3000`.
+- `DATABASE_URL` is the PostgreSQL connection string used by Prisma 7.
+- `AUTH_SECRET` signs Auth.js sessions. `AUTH_GITHUB_*` and `AUTH_GOOGLE_*` enable the corresponding OAuth buttons when both values for a provider are set.
+- `AUTH_TRUST_HOST=true` is required when the deployment sits behind a trusted reverse proxy.
 - `NEXT_PUBLIC_SITE_URL` defaults to `http://localhost:3000`.
 - `CROSSREF_MAILTO` is recommended so Crossref can identify requests and route them through its polite pool.
 - `OPENALEX_API_KEY` is optional and only enables an additional exact-title fallback.
 - `TUNNEL_TOKEN` is optional for deploying Cloudflare Tunnel automatically.
+
+## 🔐 Login Settings
+
+Login uses GitHub and Google OAuth without passwords or email magic links. Set the provider ID and secret in `.env`; a provider with missing values is not registered, so the rest of the application can still start.
+
+Register these callback URLs in each OAuth application:
+
+- GitHub: `https://your-domain.example/api/auth/callback/github`
+- Google: `https://your-domain.example/api/auth/callback/google`
+
+The home-page converter remains available without login. Login is required only for `/projects` and saving references to a project.
+
+## 🗄️ Database
+
+The Docker Compose setup starts PostgreSQL 17 with a healthcheck and named `pgdata` volume. For Compose, use the internal hostname in `DATABASE_URL`:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cite_for_all
+```
+
+The app container runs committed migrations with `prisma migrate deploy` before starting Next.js. For a local Node process, use `localhost` instead. Prisma 7 reads the connection URL from the root `prisma.config.ts`; `DATABASE_URL` must be present before running Prisma CLI commands.
 
 ---
 
@@ -261,6 +309,8 @@ cite-for-all/
 ├── src/
 │   ├── app/               # Next.js App Router routes & API endpoints
 │   │   ├── api/cite/      # POST /api/cite proxy route
+│   │   ├── api/projects/  # Authenticated project/reference endpoints
+│   │   ├── projects/      # Project and reference management pages
 │   │   ├── globals.css    # Global Tailwind styles
 │   │   ├── layout.tsx     # Root layout & OG metadata
 │   │   └── page.tsx       # Main page component
@@ -271,6 +321,9 @@ cite-for-all/
 │   └── lib/               # Citation service & formatting helpers
 │       ├── citation-engine/     # Strict resolver, providers, cache, CSL formatter
 │       ├── citation-service.ts  # Batch orchestration and public result mapping
+│       ├── export-citations.ts  # Shared text/BibTeX/RIS export formatting
+│       ├── references/          # CSL-to-snapshot reference writer
+│       ├── db.ts                # Prisma 7 driver-adapter singleton
 │       ├── citations.ts
 │       └── utils.ts
 ├── LICENSES/              # Third-party license copies
