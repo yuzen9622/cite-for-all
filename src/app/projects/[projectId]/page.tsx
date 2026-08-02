@@ -3,12 +3,30 @@
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Check, Copy, Download, Pencil, Trash2 } from "lucide-react"
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { ArrowLeft, Check, Copy, Download, GripVertical, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ReferenceEditor, type EditableReference } from "@/components/projects/reference-editor"
 import { SiteHeader } from "@/components/site-header"
+import { cn } from "@/lib/utils"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import {
   citationExportText,
@@ -67,6 +85,121 @@ function exportRecord(reference: StoredReference): CitationExportRecord {
   }
 }
 
+interface SortableReferenceProps {
+  reference: StoredReference
+  index: number
+  startNumber: number
+  style: CitationStyle
+  projectId: string
+  isEditing: boolean
+  dragDisabled: boolean
+  actionsDisabled: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onSaved: (reference: EditableReference) => void
+  onCancel: () => void
+}
+
+function SortableReference({
+  reference,
+  index,
+  startNumber,
+  style,
+  projectId,
+  isEditing,
+  dragDisabled,
+  actionsDisabled,
+  onEdit,
+  onDelete,
+  onSaved,
+  onCancel,
+}: SortableReferenceProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: reference.id, disabled: dragDisabled })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging && "relative z-10 opacity-70")}
+    >
+      <Card
+        className={cn(
+          "rounded-none transition-shadow",
+          isDragging && "shadow-lg ring-2 ring-accent"
+        )}
+      >
+        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <button
+              type="button"
+              className="mt-0.5 inline-flex size-8 shrink-0 touch-none cursor-grab items-center justify-center border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={dragDisabled}
+              aria-label={`拖曳排序：${reference.title}`}
+              title="拖曳排序；使用鍵盤時按空白鍵拿起，再用方向鍵移動"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="size-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="mb-1 font-mono text-[11px] font-bold text-[#b84025]">
+                項目 {String(index + startNumber).padStart(2, "0")} · {reference.inputType === "doi" ? "DOI" : "標題"}
+              </p>
+              <CardTitle className="break-words text-lg">{reference.title}</CardTitle>
+              <p className="mt-1 break-words text-xs text-muted-foreground">
+                {[reference.year, reference.journal, reference.doi].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              disabled={actionsDisabled}
+              className="rounded-none"
+            >
+              <Pencil /> 編輯
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              disabled={actionsDisabled}
+              className="rounded-none text-destructive hover:text-destructive"
+            >
+              <Trash2 /> 刪除
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isEditing ? (
+            <ReferenceEditor
+              projectId={projectId}
+              reference={reference}
+              onSaved={onSaved}
+              onCancel={onCancel}
+            />
+          ) : (
+            <pre className="overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
+              {citationExportText(exportRecord(reference), style, index, startNumber)}
+            </pre>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>()
   const projectId = params.projectId
@@ -78,6 +211,12 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [requiresLogin, setRequiresLogin] = useState(false)
+  const [reorderPending, setReorderPending] = useState(false)
+  const [reorderStatus, setReorderStatus] = useState("")
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const loadProject = useCallback(async () => {
     setLoading(true)
@@ -194,6 +333,65 @@ export default function ProjectDetailPage() {
         : current
     )
     setEditingId(null)
+  }
+
+  async function reorderReferences(activeId: string, overId: string) {
+    if (!project || activeId === overId || reorderPending || editingId) {
+      return
+    }
+
+    const oldIndex = project.references.findIndex((item) => item.id === activeId)
+    const newIndex = project.references.findIndex((item) => item.id === overId)
+    if (oldIndex < 0 || newIndex < 0) {
+      return
+    }
+
+    const previousReferences = project.references
+    const nextReferences = arrayMove(previousReferences, oldIndex, newIndex).map(
+      (reference, index) => ({ ...reference, sortOrder: index + 1 })
+    )
+
+    setProject((current) =>
+      current ? { ...current, references: nextReferences } : current
+    )
+    setReorderPending(true)
+    setReorderStatus("正在儲存新排序…")
+    setError("")
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/references`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referenceIds: nextReferences.map((reference) => reference.id),
+        }),
+      })
+      const payload = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(payload.error || "儲存文獻排序失敗。")
+      }
+
+      setReorderStatus("排序已儲存。")
+    } catch (reorderError) {
+      setProject((current) =>
+        current ? { ...current, references: previousReferences } : current
+      )
+      setReorderStatus("排序未儲存。")
+      setError(
+        reorderError instanceof Error
+          ? reorderError.message
+          : "無法連線到文獻服務，請稍後再試。"
+      )
+    } finally {
+      setReorderPending(false)
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    if (event.over) {
+      void reorderReferences(String(event.active.id), String(event.over.id))
+    }
   }
 
   if (loading) {
@@ -330,53 +528,53 @@ export default function ProjectDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        {project.references.length === 0 ? (
+      {project.references.length > 1 && (
+        <div className="mb-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <p>拖曳每筆文獻左側的把手即可調整引用與匯出順序。</p>
+          <p className="shrink-0" aria-live="polite">
+            {reorderStatus}
+          </p>
+        </div>
+      )}
+
+      {project.references.length === 0 ? (
           <Card className="rounded-none border-dashed">
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
               此專案目前沒有文獻。請回到首頁轉換後儲存。
             </CardContent>
           </Card>
-        ) : (
-          project.references.map((reference, index) => (
-            <Card key={reference.id} className="rounded-none">
-              <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="mb-1 font-mono text-[11px] font-bold text-[#b84025]">
-                    項目 {String(index + startNumber).padStart(2, "0")} · {reference.inputType === "doi" ? "DOI" : "標題"}
-                  </p>
-                  <CardTitle className="break-words text-lg">{reference.title}</CardTitle>
-                  <p className="mt-1 break-words text-xs text-muted-foreground">
-                    {[reference.year, reference.journal, reference.doi].filter(Boolean).join(" · ")}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(reference.id)} className="rounded-none">
-                    <Pencil /> 編輯
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => void deleteReference(reference)} className="rounded-none text-destructive hover:text-destructive">
-                    <Trash2 /> 刪除
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {editingId === reference.id ? (
-                  <ReferenceEditor
-                    projectId={projectId}
-                    reference={reference}
-                    onSaved={updateReference}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : (
-                  <pre className="overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
-                    {citationExportText(exportRecord(reference), style, index, startNumber)}
-                  </pre>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={project.references.map((reference) => reference.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {project.references.map((reference, index) => (
+                <SortableReference
+                  key={reference.id}
+                  reference={reference}
+                  index={index}
+                  startNumber={startNumber}
+                  style={style}
+                  projectId={projectId}
+                  isEditing={editingId === reference.id}
+                  dragDisabled={reorderPending || editingId !== null}
+                  actionsDisabled={reorderPending}
+                  onEdit={() => setEditingId(reference.id)}
+                  onDelete={() => void deleteReference(reference)}
+                  onSaved={updateReference}
+                  onCancel={() => setEditingId(null)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
       </main>
     </>
   )
