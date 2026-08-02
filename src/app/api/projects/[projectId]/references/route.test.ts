@@ -20,7 +20,7 @@ vi.mock("@/lib/references/reference-writer", () => ({
   cslFromMetadata: mocks.cslFromMetadata,
 }))
 
-import { POST } from "@/app/api/projects/[projectId]/references/route"
+import { PATCH, POST } from "@/app/api/projects/[projectId]/references/route"
 
 const context = { params: Promise.resolve({ projectId: "project-1" }) }
 
@@ -29,6 +29,14 @@ function request(items: unknown[]) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items }),
+  })
+}
+
+function reorderRequest(referenceIds: unknown[]) {
+  return new Request("http://localhost/api/projects/project-1/references", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ referenceIds }),
   })
 }
 
@@ -136,5 +144,144 @@ describe("POST /api/projects/[projectId]/references", () => {
       select: { doi: true },
     })
     expect(create).not.toHaveBeenCalled()
+  })
+})
+
+describe("PATCH /api/projects/[projectId]/references", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } })
+    mocks.projectFindFirst.mockResolvedValue({ id: "project-1" })
+  })
+
+  it("returns 401 before querying the project", async () => {
+    mocks.auth.mockResolvedValue(null)
+
+    const response = await PATCH(
+      reorderRequest(["reference-2", "reference-1"]),
+      context
+    )
+
+    expect(response.status).toBe(401)
+    expect(mocks.projectFindFirst).not.toHaveBeenCalled()
+    expect(mocks.transaction).not.toHaveBeenCalled()
+  })
+
+  it("rejects duplicate reference IDs before opening a transaction", async () => {
+    const response = await PATCH(
+      reorderRequest(["reference-1", "reference-1"]),
+      context
+    )
+
+    expect(response.status).toBe(400)
+    expect(mocks.transaction).not.toHaveBeenCalled()
+  })
+
+  it("returns 404 for a project the user does not own", async () => {
+    mocks.projectFindFirst.mockResolvedValue(null)
+
+    const response = await PATCH(
+      reorderRequest(["reference-2", "reference-1"]),
+      context
+    )
+
+    expect(response.status).toBe(404)
+    expect(mocks.transaction).not.toHaveBeenCalled()
+  })
+
+  it("rejects a stale order without changing sortOrder", async () => {
+    const updateMany = vi.fn()
+    mocks.transaction.mockImplementation(async (callback) =>
+      callback({
+        reference: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: "reference-1", sortOrder: 1 },
+            { id: "reference-2", sortOrder: 2 },
+          ]),
+          updateMany,
+        },
+      })
+    )
+
+    const response = await PATCH(reorderRequest(["reference-1"]), context)
+
+    expect(response.status).toBe(409)
+    expect(updateMany).not.toHaveBeenCalled()
+  })
+
+  it("rejects an ID that does not belong to the project", async () => {
+    const updateMany = vi.fn()
+    mocks.transaction.mockImplementation(async (callback) =>
+      callback({
+        reference: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: "reference-1", sortOrder: 1 },
+            { id: "reference-2", sortOrder: 2 },
+          ]),
+          updateMany,
+        },
+      })
+    )
+
+    const response = await PATCH(
+      reorderRequest(["reference-1", "foreign-reference"]),
+      context
+    )
+
+    expect(response.status).toBe(409)
+    expect(updateMany).not.toHaveBeenCalled()
+  })
+
+  it("moves every row aside before assigning the requested order", async () => {
+    const updateMany = vi
+      .fn()
+      .mockResolvedValueOnce({ count: 2 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 })
+    mocks.transaction.mockImplementation(async (callback) =>
+      callback({
+        reference: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: "reference-1", sortOrder: 1 },
+            { id: "reference-2", sortOrder: 2 },
+          ]),
+          updateMany,
+        },
+      })
+    )
+
+    const response = await PATCH(
+      reorderRequest(["reference-2", "reference-1"]),
+      context
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      referenceIds: ["reference-2", "reference-1"],
+    })
+    expect(updateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        projectId: "project-1",
+        project: { userId: "user-1" },
+      },
+      data: { sortOrder: { increment: 5 } },
+    })
+    expect(updateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: "reference-2",
+        projectId: "project-1",
+        project: { userId: "user-1" },
+      },
+      data: { sortOrder: 1 },
+    })
+    expect(updateMany).toHaveBeenNthCalledWith(3, {
+      where: {
+        id: "reference-1",
+        projectId: "project-1",
+        project: { userId: "user-1" },
+      },
+      data: { sortOrder: 2 },
+    })
   })
 })

@@ -49,10 +49,21 @@ const requestSchema = z
   .object({ items: z.array(referenceInputSchema).min(1).max(MAX_BATCH_SIZE) })
   .strict()
 
+const reorderSchema = z
+  .object({
+    referenceIds: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .max(MAX_REFERENCES_PER_PROJECT)
+      .refine((ids) => new Set(ids).size === ids.length),
+  })
+  .strict()
+
 type ReferenceMetadata = z.infer<typeof metadataSchema>
 
 class CapacityError extends Error {}
 class FormattingError extends Error {}
+class OrderConflictError extends Error {}
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, {
@@ -151,6 +162,96 @@ async function serializableTransaction<T>(
   }
 
   throw new Error("Serializable transaction failed")
+}
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ projectId: string }> }
+) {
+  const identity = await getUserId()
+  if (identity.response) {
+    return identity.response
+  }
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: "請提供有效的 JSON 請求。" }, 400)
+  }
+
+  const parsed = reorderSchema.safeParse(body)
+  if (!parsed.success) {
+    return json({ error: "文獻排序資料格式不符合規定。" }, 400)
+  }
+
+  const { projectId } = await context.params
+
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId: identity.userId },
+      select: { id: true },
+    })
+
+    if (!project) {
+      return json({ error: "找不到此專案。" }, 404)
+    }
+
+    const referenceIds = await serializableTransaction(async (transaction) => {
+      const references = await transaction.reference.findMany({
+        where: { projectId, project: { userId: identity.userId } },
+        select: { id: true, sortOrder: true },
+      })
+      const requestedIds = new Set(parsed.data.referenceIds)
+
+      if (
+        references.length !== parsed.data.referenceIds.length ||
+        references.some((reference) => !requestedIds.has(reference.id))
+      ) {
+        throw new OrderConflictError("文獻清單已變更，請重新排序。")
+      }
+
+      const maxSortOrder = references.reduce(
+        (maximum, reference) => Math.max(maximum, reference.sortOrder),
+        0
+      )
+      const temporaryOffset = maxSortOrder + references.length + 1
+
+      await transaction.reference.updateMany({
+        where: { projectId, project: { userId: identity.userId } },
+        data: { sortOrder: { increment: temporaryOffset } },
+      })
+
+      for (const [index, referenceId] of parsed.data.referenceIds.entries()) {
+        const updated = await transaction.reference.updateMany({
+          where: {
+            id: referenceId,
+            projectId,
+            project: { userId: identity.userId },
+          },
+          data: { sortOrder: index + 1 },
+        })
+
+        if (updated.count !== 1) {
+          throw new OrderConflictError("文獻清單已變更，請重新排序。")
+        }
+      }
+
+      return parsed.data.referenceIds
+    })
+
+    return json({ success: true, referenceIds })
+  } catch (error) {
+    if (error instanceof OrderConflictError) {
+      return json({ error: error.message }, 409)
+    }
+    if (isSerializationConflict(error) || isUniqueConflict(error)) {
+      return json({ error: "專案正在被其他操作修改，請重試。" }, 409)
+    }
+
+    console.error("[references] Unable to reorder references", error)
+    return databaseUnavailable()
+  }
 }
 
 export async function POST(
