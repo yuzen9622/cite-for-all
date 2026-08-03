@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   MAX_BATCH_SIZE,
   citationText,
@@ -51,7 +52,6 @@ export function useCitationConverter() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-  const [saveMessage, setSaveMessage] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
 
   const parsedInputs = useMemo(() => parseCitationInputs(rawInput), [rawInput])
@@ -75,7 +75,6 @@ export function useCitationConverter() {
   function changeMode(nextMode: InputMode) {
     setMode(nextMode)
     setError("")
-    setSaveMessage("")
     setResults([])
     setRawInput("")
   }
@@ -83,18 +82,15 @@ export function useCitationConverter() {
   function updateInput(value: string) {
     setRawInput(value)
     setError("")
-    setSaveMessage("")
   }
 
   function loadExample() {
     setRawInput(EXAMPLES[mode])
     setError("")
-    setSaveMessage("")
   }
 
   async function convert() {
     setError("")
-    setSaveMessage("")
 
     if (!rawInput.trim()) {
       setError("請先貼上 DOI 或完整論文標題。")
@@ -123,13 +119,23 @@ export function useCitationConverter() {
       const payload = (await response.json()) as ApiResponse
 
       if (!response.ok || !payload.results) {
-        setError(payload.error || "轉換失敗，請稍後再試。")
+        toast.error(payload.error || "轉換失敗，請稍後再試。")
         return
       }
 
       setResults(payload.results)
+
+      const succeeded = payload.results.filter((result) => result.success).length
+      const failed = payload.results.length - succeeded
+      if (succeeded === 0) {
+        toast.error(`${failed} 筆都找不到相符的文獻。`)
+      } else if (failed > 0) {
+        toast.warning(`已轉換 ${succeeded} 筆；${failed} 筆找不到相符的文獻。`)
+      } else {
+        toast.success(`已轉換 ${succeeded} 筆文獻。`)
+      }
     } catch {
-      setError("無法連線到轉換服務，請檢查網路後重試。")
+      toast.error("無法連線到轉換服務，請檢查網路後重試。")
     } finally {
       setLoading(false)
     }
@@ -170,37 +176,47 @@ export function useCitationConverter() {
       await navigator.clipboard.writeText(text)
       setCopied(copyId)
       window.setTimeout(() => setCopied(null), 1800)
+      toast.success("已複製到剪貼簿。")
     } catch {
-      setError("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
   }
 
   function downloadAll() {
     const extension = style === "bibtex" ? "bib" : "txt"
-    downloadTextFile(
-      allCitationText(),
-      `citations-${style}.${extension}`,
-      "text/plain;charset=utf-8"
-    )
+    const filename = `citations-${style}.${extension}`
+    try {
+      downloadTextFile(
+        allCitationText(),
+        filename,
+        "text/plain;charset=utf-8"
+      )
+      toast.success(`已下載 ${filename}。`)
+    } catch {
+      toast.error("下載失敗，請稍後再試。")
+    }
   }
 
   function downloadRis() {
-    downloadTextFile(
-      formatRisExport(successfulResults.map((result) => result.data)),
-      "citations.ris",
-      "application/x-research-info-systems;charset=utf-8"
-    )
+    try {
+      downloadTextFile(
+        formatRisExport(successfulResults.map((result) => result.data)),
+        "citations.ris",
+        "application/x-research-info-systems;charset=utf-8"
+      )
+      toast.success("已下載 citations.ris。")
+    } catch {
+      toast.error("下載失敗，請稍後再試。")
+    }
   }
 
   async function saveToProject(projectId: string) {
     if (successfulResults.length === 0) {
-      setError("目前沒有可儲存的文獻。")
+      toast.error("目前沒有可儲存的文獻。")
       return false
     }
 
     setSaving(true)
-    setError("")
-    setSaveMessage("")
 
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
@@ -219,20 +235,22 @@ export function useCitationConverter() {
       const payload = (await response.json()) as SaveResponse
 
       if (!response.ok) {
-        setError(payload.error || "儲存失敗，請稍後再試。")
+        toast.error(payload.error || "儲存失敗，請稍後再試。")
         return false
       }
 
       const createdCount = payload.created?.length ?? 0
       const skippedCount = payload.skipped?.length ?? 0
-      setSaveMessage(
-        skippedCount
-          ? `已儲存 ${createdCount} 筆；${skippedCount} 筆因 DOI 重複而略過。`
-          : `已儲存 ${createdCount} 筆文獻。`
-      )
+      if (skippedCount) {
+        toast.success(`已儲存 ${createdCount} 筆文獻。`, {
+          description: `${skippedCount} 筆因 DOI 重複而略過。`,
+        })
+      } else {
+        toast.success(`已儲存 ${createdCount} 筆文獻。`)
+      }
       return true
     } catch {
-      setError("無法連線到專案服務，請稍後再試。")
+      toast.error("無法連線到專案服務，請稍後再試。")
       return false
     } finally {
       setSaving(false)
@@ -247,7 +265,6 @@ export function useCitationConverter() {
     loading,
     saving,
     error,
-    saveMessage,
     copied,
     parsedInputs,
     successfulResults,

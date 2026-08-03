@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -82,12 +83,13 @@ export function ReferenceEditor({
         error?: string
       }
       if (!response.ok || !payload.reference) {
-        setError(payload.error || "儲存文獻失敗。")
+        toast.error(payload.error || "儲存文獻失敗。")
         return
       }
       onSaved(payload.reference)
+      toast.success(`已更新「${payload.reference.title}」。`)
     } catch {
-      setError("無法連線到文獻服務，請稍後再試。")
+      toast.error("無法連線到文獻服務，請稍後再試。")
     } finally {
       setSaving(false)
     }

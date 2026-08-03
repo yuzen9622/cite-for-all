@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ArrowLeft, Check, Copy, Download, GripVertical, Pencil, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -268,25 +269,34 @@ export default function ProjectDetailPage() {
       await navigator.clipboard.writeText(allText)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
+      toast.success(`已複製 ${records.length} 筆引用。`)
     } catch {
-      setError("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
   }
 
   function downloadAll() {
-    downloadTextFile(
-      allText,
-      `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`,
-      "text/plain;charset=utf-8"
-    )
+    const filename = `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`
+    try {
+      downloadTextFile(allText, filename, "text/plain;charset=utf-8")
+      toast.success(`已下載 ${filename}。`)
+    } catch {
+      toast.error("下載失敗，請稍後再試。")
+    }
   }
 
   function downloadRis() {
-    downloadTextFile(
-      formatRisExport(records),
-      `${project?.name ?? "project"}.ris`,
-      "application/x-research-info-systems;charset=utf-8"
-    )
+    const filename = `${project?.name ?? "project"}.ris`
+    try {
+      downloadTextFile(
+        formatRisExport(records),
+        filename,
+        "application/x-research-info-systems;charset=utf-8"
+      )
+      toast.success(`已下載 ${filename}。`)
+    } catch {
+      toast.error("下載失敗，請稍後再試。")
+    }
   }
 
   async function deleteReference(reference: StoredReference) {
@@ -301,7 +311,7 @@ export default function ProjectDetailPage() {
       )
       const payload = (await response.json()) as { error?: string }
       if (!response.ok) {
-        setError(payload.error || "刪除文獻失敗。")
+        toast.error(payload.error || "刪除文獻失敗。")
         return
       }
       setProject((current) =>
@@ -314,8 +324,9 @@ export default function ProjectDetailPage() {
             }
           : current
       )
+      toast.success(`已刪除「${reference.title}」。`)
     } catch {
-      setError("無法連線到文獻服務，請稍後再試。")
+      toast.error("無法連線到文獻服務，請稍後再試。")
     }
   }
 
@@ -356,7 +367,6 @@ export default function ProjectDetailPage() {
     )
     setReorderPending(true)
     setReorderStatus("正在儲存新排序…")
-    setError("")
 
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
@@ -372,18 +382,19 @@ export default function ProjectDetailPage() {
         throw new Error(payload.error || "儲存文獻排序失敗。")
       }
 
-      setReorderStatus("排序已儲存。")
+      toast.success("已儲存新的文獻排序。")
     } catch (reorderError) {
       setProject((current) =>
         current ? { ...current, references: previousReferences } : current
       )
-      setReorderStatus("排序未儲存。")
-      setError(
+      toast.error(
         reorderError instanceof Error
           ? reorderError.message
           : "無法連線到文獻服務，請稍後再試。"
       )
     } finally {
+      // The outcome is announced by the toast; this line only reports progress.
+      setReorderStatus("")
       setReorderPending(false)
     }
   }

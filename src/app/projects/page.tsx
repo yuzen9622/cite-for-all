@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import { ArrowLeft, FolderOpen, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -92,11 +93,12 @@ export default function ProjectsPage() {
     setSubmitting(true)
     setError("")
     try {
+      const projectName = name.trim()
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
+          name: projectName,
           description: description || null,
           defaultStyle,
         }),
@@ -106,14 +108,15 @@ export default function ProjectsPage() {
         error?: string
       }
       if (!response.ok || !payload.project) {
-        setError(payload.error || "建立專案失敗。")
+        toast.error(payload.error || "建立專案失敗。")
         return
       }
       setProjects((current) => [payload.project as ProjectSummary, ...current])
       setName("")
       setDescription("")
+      toast.success(`已建立專案「${projectName}」。`)
     } catch {
-      setError("無法連線到專案服務，請稍後再試。")
+      toast.error("無法連線到專案服務，請稍後再試。")
     } finally {
       setSubmitting(false)
     }
@@ -125,7 +128,6 @@ export default function ProjectsPage() {
       return
     }
 
-    setError("")
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
         method: "PATCH",
@@ -137,7 +139,7 @@ export default function ProjectsPage() {
         error?: string
       }
       if (!response.ok || !payload.project) {
-        setError(payload.error || "重新命名失敗。")
+        toast.error(payload.error || "重新命名失敗。")
         return
       }
       setProjects((current) =>
@@ -145,8 +147,9 @@ export default function ProjectsPage() {
           item.id === project.id ? (payload.project as ProjectSummary) : item
         )
       )
+      toast.success(`已更名為「${nextName}」。`)
     } catch {
-      setError("無法連線到專案服務，請稍後再試。")
+      toast.error("無法連線到專案服務，請稍後再試。")
     }
   }
 
@@ -157,20 +160,22 @@ export default function ProjectsPage() {
     }
 
     setDeleting(true)
-    setError("")
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
         method: "DELETE",
       })
       const payload = (await response.json()) as { error?: string }
       if (!response.ok) {
-        setError(payload.error || "刪除專案失敗。")
+        // The dialog stays open so the user can retry; the toast still shows
+        // because sonner stacks above the dialog backdrop.
+        toast.error(payload.error || "刪除專案失敗。")
         return
       }
       setProjects((current) => current.filter((item) => item.id !== project.id))
       setProjectToDelete(null)
+      toast.success(`已刪除專案「${project.name}」。`)
     } catch {
-      setError("無法連線到專案服務，請稍後再試。")
+      toast.error("無法連線到專案服務，請稍後再試。")
     } finally {
       setDeleting(false)
     }

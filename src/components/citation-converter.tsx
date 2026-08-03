@@ -9,6 +9,7 @@ import {
   FolderPlus,
   LoaderCircle,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -104,7 +105,7 @@ export function CitationConverter() {
           error?: string
         }
         if (!response.ok || !payload.project) {
-          setSaveError(payload.error || "建立專案失敗。")
+          toast.error(payload.error || "建立專案失敗。")
           return
         }
         projectId = payload.project.id
@@ -113,8 +114,9 @@ export function CitationConverter() {
           payload.project as ProjectSummary,
         ])
         setNewProjectName("")
+        toast.success(`已建立專案「${payload.project.name}」。`)
       } catch {
-        setSaveError("無法連線到專案服務，請稍後再試。")
+        toast.error("無法連線到專案服務，請稍後再試。")
         return
       }
     }
@@ -427,15 +429,6 @@ export function CitationConverter() {
                       </div>
                     )}
                   </div>
-                )}
-
-                {converter.saveMessage && (
-                  <p
-                    className="mt-3 text-sm font-semibold text-[#5d9a56]"
-                    role="status"
-                  >
-                    {converter.saveMessage}
-                  </p>
                 )}
 
                 {failedCount > 0 && (
