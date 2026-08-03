@@ -43,18 +43,25 @@ export function SiteHeader() {
           </a>
           {user ? (
             <div className="flex items-center gap-2">
-              {user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.image}
-                  alt={user.name ?? user.email ?? "使用者頭像"}
-                  className="size-8 rounded-full border border-border object-cover"
-                />
-              ) : (
-                <span className="grid size-8 place-items-center rounded-full border border-border bg-secondary text-xs font-bold">
-                  {(user.name ?? user.email ?? "使").slice(0, 1).toUpperCase()}
-                </span>
-              )}
+              <Link
+                href="/projects"
+                aria-label="前往我的專案"
+                title="我的專案"
+                className="shrink-0 rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                {user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image}
+                    alt={user.name ?? user.email ?? "使用者頭像"}
+                    className="size-8 rounded-full border border-border object-cover transition-colors hover:border-accent"
+                  />
+                ) : (
+                  <span className="grid size-8 place-items-center rounded-full border border-border bg-secondary text-xs font-bold transition-colors hover:border-accent">
+                    {(user.name ?? user.email ?? "使").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </Link>
               <Link
                 href="/projects"
                 className="hidden text-sm font-semibold hover:text-accent sm:inline"
