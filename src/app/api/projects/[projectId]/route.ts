@@ -113,7 +113,10 @@ export async function PATCH(
 
     const project = await prisma.project.findFirst({
       where: { id: projectId, userId: identity.userId },
-      include: { references: { orderBy: { sortOrder: "asc" } } },
+      include: {
+        references: { orderBy: { sortOrder: "asc" } },
+        _count: { select: { references: true } },
+      },
     })
 
     return project ? json({ project }) : json({ error: "找不到此專案。" }, 404)

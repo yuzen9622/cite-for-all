@@ -133,6 +133,7 @@ export async function POST(request: Request) {
           description: parsed.data.description,
           defaultStyle: parsed.data.defaultStyle ?? "apa",
         },
+        include: { _count: { select: { references: true } } },
       })
     })
 
