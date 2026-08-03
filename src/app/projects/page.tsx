@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogClose,
+  DialogDescription,
+  DialogPopup,
+  DialogPortal,
+  DialogTitle,
+  DialogViewport,
+} from "@/components/ui/dialog"
 import { SiteHeader } from "@/components/site-header"
 
 interface ProjectSummary {
@@ -15,7 +25,7 @@ interface ProjectSummary {
   description: string | null
   defaultStyle: string
   updatedAt: string
-  _count: { references: number }
+  _count?: { references: number }
 }
 
 const styles = [
@@ -37,6 +47,10 @@ export default function ProjectsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [requiresLogin, setRequiresLogin] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(
+    null
+  )
+  const [deleting, setDeleting] = useState(false)
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -136,11 +150,13 @@ export default function ProjectsPage() {
     }
   }
 
-  async function deleteProject(project: ProjectSummary) {
-    if (!window.confirm(`確定要刪除「${project.name}」及其中的文獻嗎？`)) {
+  async function confirmDeleteProject() {
+    const project = projectToDelete
+    if (!project) {
       return
     }
 
+    setDeleting(true)
     setError("")
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
@@ -152,8 +168,11 @@ export default function ProjectsPage() {
         return
       }
       setProjects((current) => current.filter((item) => item.id !== project.id))
+      setProjectToDelete(null)
     } catch {
       setError("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -275,7 +294,7 @@ export default function ProjectsPage() {
                         {project.name}
                       </Link>
                       <span className="shrink-0 text-xs font-normal text-muted-foreground">
-                        {project._count.references} 筆
+                        {project._count?.references ?? 0} 筆
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -300,7 +319,7 @@ export default function ProjectsPage() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => void deleteProject(project)}
+                        onClick={() => setProjectToDelete(project)}
                         className="rounded-none text-destructive hover:text-destructive"
                       >
                         <Trash2 className="size-4" /> 刪除專案
@@ -314,6 +333,55 @@ export default function ProjectsPage() {
         </>
       )}
       </main>
+
+      <Dialog
+        open={projectToDelete !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deleting) {
+            setProjectToDelete(null)
+          }
+        }}
+      >
+        <DialogPortal>
+          <DialogBackdrop />
+          <DialogViewport>
+            <DialogPopup>
+              <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
+                <DialogTitle>刪除專案</DialogTitle>
+                <DialogDescription className="mt-1">
+                  確定要刪除「{projectToDelete?.name}」及其中的{" "}
+                  {projectToDelete?._count?.references ?? 0}{" "}
+                  筆文獻嗎？此動作無法復原。
+                </DialogDescription>
+
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <DialogClose
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={deleting}
+                        className="rounded-none border-foreground/30 bg-background"
+                      />
+                    }
+                  >
+                    取消
+                  </DialogClose>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => void confirmDeleteProject()}
+                    disabled={deleting}
+                    className="rounded-none"
+                  >
+                    {deleting ? "刪除中…" : "刪除專案"}
+                  </Button>
+                </div>
+              </div>
+            </DialogPopup>
+          </DialogViewport>
+        </DialogPortal>
+      </Dialog>
     </>
   )
 }
