@@ -19,7 +19,7 @@ describe("reference writer", () => {
     expect(csl).toMatchObject({
       type: "article-journal",
       title: "Original title",
-      DOI: "10.1000/test",
+      DOI: "10.1000/TEST",
       author: [{ family: "Doe", given: "Jane" }],
     })
     expect(csl.id).toMatch(/^c[a-z0-9]{24}$/)

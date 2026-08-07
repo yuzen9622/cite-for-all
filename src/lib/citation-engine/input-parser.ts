@@ -16,34 +16,44 @@ function trimUnbalancedClosingParentheses(value: string) {
   return closing > opening ? value.replace(/\)+$/g, "") : value
 }
 
-export function normalizeDoi(value: string) {
-  let normalized = value.trim()
+/**
+ * 清理 DOI 字串（去除 doi: 前綴、URL 前綴與結尾標點），保留原始字母大小寫。
+ *
+ * 顯示用的 DOI 應保留出版社／IEEE Xplore metadata 的原始大小寫
+ * （例如 10.1109/TE...、10.1109/TLT...）；大小寫只做比對與快取時才需正規化。
+ */
+export function cleanDoi(value: string) {
+  let cleaned = value.trim()
 
   try {
-    normalized = decodeURIComponent(normalized)
+    cleaned = decodeURIComponent(cleaned)
   } catch {
     // A malformed percent escape cannot be part of a valid DOI. Leave it as-is
     // so the syntax guard below rejects it.
   }
 
-  normalized = normalized
+  cleaned = cleaned
     .replace(/^doi:\s*/i, "")
     .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "")
     .trim()
     .replace(/[.,;:]+$/g, "")
 
-  return trimUnbalancedClosingParentheses(normalized).toLowerCase()
+  return trimUnbalancedClosingParentheses(cleaned)
+}
+
+export function normalizeDoi(value: string) {
+  return cleanDoi(value).toLowerCase()
 }
 
 export function extractDoi(value: string) {
-  const normalized = normalizeDoi(value)
+  const cleaned = cleanDoi(value)
 
-  if (DOI_EXACT_PATTERN.test(normalized)) {
-    return normalized
+  if (DOI_EXACT_PATTERN.test(cleaned)) {
+    return cleaned
   }
 
   const match = value.match(DOI_PATTERN)
-  return match ? normalizeDoi(match[0]) : null
+  return match ? cleanDoi(match[0]) : null
 }
 
 export function isValidDoi(value: string) {

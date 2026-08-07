@@ -23,7 +23,7 @@ describe("metadata normalization", () => {
     })
 
     expect(result?.csl).toMatchObject({
-      DOI: "10.1000/test",
+      DOI: "10.1000/TEST",
       type: "article-journal",
       title: "A & B: A Review",
     })
@@ -49,7 +49,7 @@ describe("metadata normalization", () => {
     })
 
     expect(result?.csl).toMatchObject({
-      DOI: "10.5281/zenodo.1",
+      DOI: "10.5281/ZENODO.1",
       type: "dataset",
       title: "Dataset title",
     })
@@ -126,7 +126,7 @@ describe("metadata normalization", () => {
     expect(result).not.toHaveProperty("author")
     expect(result).not.toHaveProperty("issued")
     expect(result).not.toHaveProperty("container-title")
-    expect(result.DOI).toBe("10.1000/new")
+    expect(result.DOI).toBe("10.1000/NEW")
     expect(result.type).toBe("article-journal")
   })
 

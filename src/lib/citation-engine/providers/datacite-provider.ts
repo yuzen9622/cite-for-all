@@ -40,7 +40,10 @@ export class DataCiteProvider implements MetadataProvider {
     }
 
     const record = dataciteRecord(raw)
-    return record?.csl.DOI === normalizeDoi(doi) ? record : null
+    return record?.csl.DOI &&
+      normalizeDoi(record.csl.DOI) === normalizeDoi(doi)
+      ? record
+      : null
   }
 
   async searchByTitle(title: string, signal?: AbortSignal) {
