@@ -22,6 +22,7 @@ export interface CslItem {
   author?: CslName[]
   issued?: CslDate
   "container-title"?: string
+  "container-title-short"?: string
   volume?: string
   issue?: string
   page?: string

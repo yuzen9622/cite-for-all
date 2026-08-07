@@ -1,4 +1,8 @@
-import { normalizeDoi } from "@/lib/citation-engine/input-parser"
+import {
+  cleanDoi,
+  normalizeDoi,
+} from "@/lib/citation-engine/input-parser"
+import { resolveContainerTitleShort } from "@/lib/citation-engine/journal-abbreviation"
 import { stripMarkup } from "@/lib/citation-engine/title-matcher"
 import type { CitationMetadata } from "@/lib/citations"
 import type {
@@ -133,6 +137,11 @@ export function recordFromCsl(
 
   const doi = text(raw.DOI ?? raw.doi)
   const normalizedDoi = doi ? normalizeDoi(doi) : undefined
+  const containerTitle = textFromFirst(raw["container-title"])
+  const providerShort =
+    textFromFirst(raw["container-title-short"]) ??
+    textFromFirst(raw["short-container-title"]) ??
+    textFromFirst(raw["journal-abbreviation"])
   const issued =
     issuedDate(
       raw.issued ??
@@ -147,11 +156,15 @@ export function recordFromCsl(
     title,
     author: namesFromUnknown(raw.author),
     issued,
-    "container-title": textFromFirst(raw["container-title"]),
+    "container-title": containerTitle,
+    "container-title-short": resolveContainerTitleShort(
+      containerTitle,
+      providerShort
+    ),
     volume: stringValue(raw.volume),
     issue: stringValue(raw.issue),
     page: stringValue(raw.page),
-    DOI: normalizedDoi,
+    DOI: doi ? cleanDoi(doi) : undefined,
     publisher: text(raw.publisher),
     URL: text(raw.URL ?? raw.url),
   }
@@ -259,7 +272,19 @@ export function applyMetadataToCsl(
 
   const journal = editableString(metadata, "journal")
   if (journal !== undefined) {
-    setOptionalCslField(next, "container-title", journal?.trim() ?? null)
+    const trimmedJournal = journal?.trim() ?? null
+    const journalChanged = trimmedJournal !== (next["container-title"] ?? null)
+    setOptionalCslField(next, "container-title", trimmedJournal)
+    setOptionalCslField(
+      next,
+      "container-title-short",
+      trimmedJournal
+        ? resolveContainerTitleShort(
+            trimmedJournal,
+            journalChanged ? undefined : next["container-title-short"]
+          )
+        : null
+    )
   }
   const volume = editableString(metadata, "volume")
   if (volume !== undefined) {
@@ -275,7 +300,7 @@ export function applyMetadataToCsl(
   }
   const doiValue = editableString(metadata, "doi")
   if (doiValue !== undefined) {
-    const doi = doiValue?.trim() ? normalizeDoi(doiValue) : ""
+    const doi = doiValue?.trim() ? cleanDoi(doiValue) : ""
     setOptionalCslField(next, "DOI", doi || null)
   }
   const publisher = editableString(metadata, "publisher")

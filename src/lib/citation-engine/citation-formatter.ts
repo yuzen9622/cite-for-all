@@ -3,6 +3,7 @@ import path from "node:path"
 import { Cite, plugins } from "@citation-js/core"
 import "@citation-js/plugin-bibtex"
 import "@citation-js/plugin-csl"
+import { sentenceCaseTitle } from "@/lib/citation-engine/sentence-case"
 import type { CslItem } from "@/lib/citation-engine/types"
 import type { CitationStyle } from "@/lib/citations"
 
@@ -62,7 +63,13 @@ export function formatBibliography(
   style: Exclude<CitationStyle, "bibtex">
 ) {
   registerAssets()
-  const citation = new Cite([item])
+  // IEEE reference list 的文章標題應採 sentence case；metadata 供應商常回傳
+  // Title Case，故在此僅對 IEEE 輸出做轉換，不影響 APA/MLA 等其他樣式。
+  const cslItem =
+    style === "ieee" && item.title
+      ? { ...item, title: sentenceCaseTitle(item.title) }
+      : item
+  const citation = new Cite([cslItem])
 
   try {
     return outputText(
