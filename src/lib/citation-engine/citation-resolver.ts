@@ -1,6 +1,7 @@
 import { CitationCache } from "@/lib/citation-engine/citation-cache"
 import {
   classifyInput,
+  cleanDoi,
   normalizeDoi,
 } from "@/lib/citation-engine/input-parser"
 import {
@@ -98,6 +99,7 @@ export class CitationResolver {
 
   private async resolveDoi(doi: string, signal?: AbortSignal) {
     const canonicalDoi = normalizeDoi(doi)
+    const displayDoi = cleanDoi(doi)
     const cacheKey = `doi:${canonicalDoi}`
     const cached = this.cache.get(cacheKey)
     if (cached) {
@@ -116,9 +118,15 @@ export class CitationResolver {
         const record = await provider.getByDoi(canonicalDoi, signal)
         responded = true
 
-        if (record?.csl.DOI === canonicalDoi) {
-          this.cache.set(cacheKey, record)
-          return record
+        if (record?.csl.DOI && normalizeDoi(record.csl.DOI) === canonicalDoi) {
+          // 保留使用者輸入／DOI metadata 的原始字母大小寫，避免任意全部轉小寫。
+          const recordWithInputDoi = {
+            ...record,
+            csl: { ...record.csl, DOI: displayDoi },
+            metadata: { ...record.metadata, doi: displayDoi },
+          }
+          this.cache.set(cacheKey, recordWithInputDoi)
+          return recordWithInputDoi
         }
       } catch (error) {
         if (error instanceof ProviderError) {
@@ -183,10 +191,11 @@ export class CitationResolver {
     }
 
     if (exactMatches.size === 1) {
-      const record = [...exactMatches.values()][0]
+      const matched = [...exactMatches.values()][0]
+      const record = await this.enrichWithAuthoritativeDoi(matched, signal)
       this.cache.set(cacheKey, record)
       if (record.csl.DOI) {
-        this.cache.set(`doi:${record.csl.DOI}`, record)
+        this.cache.set(`doi:${normalizeDoi(record.csl.DOI)}`, record)
       }
       return record
     }
@@ -199,5 +208,27 @@ export class CitationResolver {
       "NOT_FOUND",
       "找不到標題完全相符的文獻，未產生引用。"
     )
+  }
+
+  /**
+   * 標題搜尋（尤其 Crossref 的 search endpoint）常會把作者名正規化成
+   * 去除重音符的 ASCII（例如 Gašević → Gasevic），並缺少期刊縮寫資訊。
+   * 若該筆標題結果帶有 DOI，就用 DOI 重新擷取更完整的權威 metadata
+   * （保留 Gašević 等原始姓名、月份、期刊縮寫）；失敗時退回原標題結果。
+   */
+  private async enrichWithAuthoritativeDoi(
+    matched: ProviderRecord,
+    signal?: AbortSignal
+  ): Promise<ProviderRecord> {
+    const doi = matched.csl.DOI
+    if (!doi) {
+      return matched
+    }
+
+    try {
+      return await this.resolveDoi(doi, signal)
+    } catch {
+      return matched
+    }
   }
 }

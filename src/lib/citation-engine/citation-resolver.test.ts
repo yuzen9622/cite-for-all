@@ -98,4 +98,63 @@ describe("CitationResolver", () => {
       code: "NOT_FOUND",
     })
   })
+
+  it("enriches a matched title with authoritative DOI metadata", async () => {
+    // 模擬 Crossref search 回傳去除重音符的 ASCII 作者與不完整資料。
+    const asciiTitleRecord: ProviderRecord = {
+      provider: "crossref",
+      providerId: "10.1000/acc",
+      csl: {
+        id: "10.1000/acc",
+        type: "article-journal",
+        title: "Big Data and Learning Analytics in Higher Education",
+        author: [{ family: "Gasevic", given: "Dragan" }],
+        DOI: "10.1000/acc",
+      },
+      metadata: {
+        title: "Big Data and Learning Analytics in Higher Education",
+        authors: ["Dragan Gasevic"],
+        doi: "10.1000/acc",
+      },
+    }
+    const titleProvider: MetadataProvider = {
+      name: "crossref",
+      searchByTitle: async () => [asciiTitleRecord],
+    }
+    // 模擬 DOI Content Negotiation 回傳保留重音符與期刊縮寫的完整 metadata。
+    const doiProvider: MetadataProvider = {
+      name: "doi.org",
+      getByDoi: async () => ({
+        provider: "doi.org",
+        providerId: "10.1000/acc",
+        csl: {
+          id: "10.1000/acc",
+          type: "article-journal",
+          title: "Big Data and Learning Analytics in Higher Education",
+          author: [{ family: "Gašević", given: "Dragan" }],
+          "container-title": "IEEE Transactions on Learning Technologies",
+          DOI: "10.1000/acc",
+        },
+        metadata: {
+          title: "Big Data and Learning Analytics in Higher Education",
+          authors: ["Dragan Gašević"],
+          doi: "10.1000/acc",
+          journal: "IEEE Transactions on Learning Technologies",
+        },
+      }),
+    }
+    const resolver = new CitationResolver({
+      doiProviders: [doiProvider],
+      titleProviders: [titleProvider],
+    })
+
+    const resolved = await resolver.resolve(
+      "Big Data and Learning Analytics in Higher Education"
+    )
+    expect(resolved.inputType).toBe("title")
+    expect(resolved.record.csl.author?.[0]?.family).toBe("Gašević")
+    expect(resolved.record.csl["container-title"]).toBe(
+      "IEEE Transactions on Learning Technologies"
+    )
+  })
 })
