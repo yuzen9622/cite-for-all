@@ -12,6 +12,15 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    exclude: [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/{coverage,tmp,cypress}*/**",
+      "**/*.d.ts",
+      "**/__fixtures__/**",
+    ],
     coverage: {
       reporter: ["text", "html"],
     },
