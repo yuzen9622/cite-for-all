@@ -58,18 +58,41 @@ function outputText(value: unknown) {
   return value.replace(/\r\n/g, "\n").trim()
 }
 
+// IEEE 只有「引號內」的標題（期刊論文、會議論文、章節、學位論文、網頁等）
+// 採 sentence case；斜體標題（書籍、軟體、標準等）依官方範例保留 Title Case
+// （例如 "Robot Vision"、"Handbook of Mathematical Functions"）。
+const ITALIC_TITLE_TYPES = new Set([
+  "bill",
+  "book",
+  "graphic",
+  "legal_case",
+  "legislation",
+  "motion_picture",
+  "song",
+  "standard",
+  "software",
+])
+
+function shouldSentenceCaseTitle(type: string | undefined) {
+  return type ? !ITALIC_TITLE_TYPES.has(type) : true
+}
+
+/**
+ * IEEE 的文章標題需 sentence case（metadata 供應商常回傳 Title Case），
+ * 其餘樣式不處理。text 與 html 兩種輸出共用同一轉換。
+ */
+function prepareIeeeItem(item: CslItem, style: Exclude<CitationStyle, "bibtex">) {
+  return style === "ieee" && item.title && shouldSentenceCaseTitle(item.type)
+    ? { ...item, title: sentenceCaseTitle(item.title) }
+    : item
+}
+
 export function formatBibliography(
   item: CslItem,
   style: Exclude<CitationStyle, "bibtex">
 ) {
   registerAssets()
-  // IEEE reference list 的文章標題應採 sentence case；metadata 供應商常回傳
-  // Title Case，故在此僅對 IEEE 輸出做轉換，不影響 APA/MLA 等其他樣式。
-  const cslItem =
-    style === "ieee" && item.title
-      ? { ...item, title: sentenceCaseTitle(item.title) }
-      : item
-  const citation = new Cite([cslItem])
+  const citation = new Cite([prepareIeeeItem(item, style)])
 
   try {
     return outputText(
@@ -84,6 +107,39 @@ export function formatBibliography(
   }
 }
 
+function extractEntryHtml(html: string) {
+  return html
+    .replace(/^<div class="csl-bib-body">\s*/i, "")
+    .replace(/\s*<\/div>\s*$/i, "")
+}
+
+/**
+ * 以 CSL 的 HTML 輸出產生含 Rich Text 標記（斜體等）的單筆參考文獻 entry。
+ * IEEE/APA/MLA 等樣式需要的斜體（刊名、書名、et al.）只存在於 HTML 格式；
+ * `format: "text"` 會把斜體全部剝除。此函式用於 UI 展示與 Rich Text 剪貼簿。
+ */
+export function formatBibliographyHtml(
+  item: CslItem,
+  style: Exclude<CitationStyle, "bibtex">
+) {
+  registerAssets()
+  const citation = new Cite([prepareIeeeItem(item, style)])
+
+  try {
+    return extractEntryHtml(
+      outputText(
+        citation.format("bibliography", {
+          format: "html",
+          template: REGISTERED_STYLE_NAMES[style],
+          lang: "en-US",
+        })
+      )
+    )
+  } catch (error) {
+    throw new Error(`Unable to format ${style} citation`, { cause: error })
+  }
+}
+
 export function formatBibtex(item: CslItem) {
   registerAssets()
   const citation = new Cite([item])
@@ -91,15 +147,24 @@ export function formatBibtex(item: CslItem) {
 }
 
 export function formatAllCitations(item: CslItem) {
+  const styles = Object.keys(STYLE_FILES) as Exclude<
+    CitationStyle,
+    "bibtex"
+  >[]
+  const citations = {} as Record<Exclude<CitationStyle, "bibtex">, string>
+  const citationsHtml = {} as Record<
+    Exclude<CitationStyle, "bibtex">,
+    string
+  >
+
+  for (const style of styles) {
+    citations[style] = formatBibliography(item, style)
+    citationsHtml[style] = formatBibliographyHtml(item, style)
+  }
+
   return {
-    citations: {
-      apa: formatBibliography(item, "apa"),
-      mla: formatBibliography(item, "mla"),
-      chicago: formatBibliography(item, "chicago"),
-      harvard: formatBibliography(item, "harvard"),
-      ieee: formatBibliography(item, "ieee"),
-      vancouver: formatBibliography(item, "vancouver"),
-    },
+    citations,
+    citationsHtml,
     bibtex: formatBibtex(item),
   }
 }

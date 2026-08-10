@@ -34,6 +34,8 @@ export interface CitationData {
   metadata: CitationMetadata
   csl: CslItem
   citations: Record<Exclude<CitationStyle, "bibtex">, string>
+  /** 含斜體等 Rich Text 標記的 HTML 版引用（UI 展示與 Rich Text 複製用） */
+  citationsHtml: Record<Exclude<CitationStyle, "bibtex">, string>
   bibtex: string
   provenance: {
     provider: "doi.org" | "crossref" | "datacite" | "openalex"

@@ -10,8 +10,10 @@ import {
   type CitationStyle,
 } from "@/lib/citations"
 import {
+  citationExportHtml,
   citationExportText,
   formatCitationExport,
+  formatCitationExportHtml,
   formatRisExport,
 } from "@/lib/export-citations"
 
@@ -163,6 +165,14 @@ export function useCitationConverter() {
     return citationExportText(result.data, style, index, startNumber)
   }
 
+  function citationHtmlAt(
+    result: Extract<CitationResult, { success: true }>,
+    style: CitationStyle,
+    index: number
+  ) {
+    return citationExportHtml(result.data, style, index, startNumber)
+  }
+
   function allCitationText() {
     return formatCitationExport(
       successfulResults.map((result) => result.data),
@@ -171,14 +181,38 @@ export function useCitationConverter() {
     )
   }
 
-  async function copyText(text: string, copyId: string) {
+  function allCitationHtml() {
+    return formatCitationExportHtml(
+      successfulResults.map((result) => result.data),
+      style,
+      startNumber
+    )
+  }
+
+  async function copyRichText(text: string, html: string | undefined, copyId: string) {
     try {
-      await navigator.clipboard.writeText(text)
+      if (html && typeof ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          }),
+        ])
+      } else {
+        await navigator.clipboard.writeText(text)
+      }
       setCopied(copyId)
       window.setTimeout(() => setCopied(null), 1800)
-      toast.success("已複製到剪貼簿。")
+      toast.success(html ? "已複製（貼上 Office 會保留斜體）。" : "已複製到剪貼簿。")
     } catch {
-      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopied(copyId)
+        window.setTimeout(() => setCopied(null), 1800)
+        toast.success("已複製到剪貼簿。")
+      } catch {
+        toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      }
     }
   }
 
@@ -277,10 +311,12 @@ export function useCitationConverter() {
     convert,
     citationText,
     citationTextAt,
+    citationHtmlAt,
     startNumber,
     updateStartNumber,
     allCitationText,
-    copyText,
+    allCitationHtml,
+    copyRichText,
     downloadAll,
     downloadRis,
     saveToProject,

@@ -32,6 +32,7 @@ import {
   useCitationConverter,
   type InputMode,
 } from "@/hooks/use-citation-converter"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
@@ -288,8 +289,9 @@ export function CitationConverter() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                converter.copyText(
+                                converter.copyRichText(
                                   converter.allCitationText(),
+                                  converter.allCitationHtml(),
                                   "all"
                                 )
                               }
@@ -510,6 +512,11 @@ export function CitationConverter() {
                       converter.style,
                       index
                     )
+                    const outputHtml = converter.citationHtmlAt(
+                      result,
+                      converter.style,
+                      index
+                    )
                     const copyId = `item-${index}`
 
                     return (
@@ -547,7 +554,11 @@ export function CitationConverter() {
                                     variant="ghost"
                                     size="icon-sm"
                                     onClick={() =>
-                                      converter.copyText(output, copyId)
+                                      converter.copyRichText(
+                                        output,
+                                        outputHtml,
+                                        copyId
+                                      )
                                     }
                                     aria-label={`複製第 ${index + 1} 筆引用`}
                                   />
@@ -568,15 +579,25 @@ export function CitationConverter() {
                           </CardAction>
                         </CardHeader>
                         <CardContent className="min-w-0 max-w-full overflow-auto p-0">
-                          <pre
-                            className={cn(
-                              "m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] whitespace-pre-wrap p-4 font-heading text-[15px] leading-7",
-                              converter.style === "bibtex" &&
-                                "overflow-x-auto font-mono text-xs leading-6 whitespace-pre"
-                            )}
-                          >
-                            {output}
-                          </pre>
+                          {outputHtml ? (
+                            <div
+                              className="m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] p-4 font-heading text-[15px] leading-7"
+                              // citeproc 已跳脫 metadata 文字；此處再經白名單淨化
+                              dangerouslySetInnerHTML={{
+                                __html: sanitizeHtml(outputHtml),
+                              }}
+                            />
+                          ) : (
+                            <pre
+                              className={cn(
+                                "m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] whitespace-pre-wrap p-4 font-heading text-[15px] leading-7",
+                                converter.style === "bibtex" &&
+                                  "overflow-x-auto font-mono text-xs leading-6 whitespace-pre"
+                              )}
+                            >
+                              {output}
+                            </pre>
+                          )}
                         </CardContent>
                       </Card>
                     )

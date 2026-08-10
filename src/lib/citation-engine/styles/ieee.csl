@@ -54,7 +54,7 @@
   <locale xml:lang="en">
     <date form="text">
       <date-part name="month" form="short" suffix=" "/>
-      <date-part name="day" form="numeric-leading-zeros" suffix=", "/>
+      <date-part name="day" form="numeric" suffix=", "/>
       <date-part name="year"/>
     </date>
     <terms>
@@ -308,6 +308,17 @@
       </choose>
     </group>
   </macro>
+  <!-- 會議論文地點（官方格式：地點為可選、無出版商欄位） -->
+  <macro name="conference-location">
+    <choose>
+      <if variable="publisher-place">
+        <text variable="publisher-place"/>
+      </if>
+      <else-if variable="event-place">
+        <text variable="event-place"/>
+      </else-if>
+    </choose>
+  </macro>
   <!-- Series -->
   <macro name="collection">
     <choose>
@@ -369,12 +380,20 @@
             <text macro="editor"/>
           </group>
           <text macro="collection"/>
-          <group delimiter=", " suffix=".">
-            <text macro="publisher"/>
+          <group delimiter=", ">
+            <text macro="conference-location"/>
             <text macro="issued"/>
             <text macro="page"/>
             <text macro="status"/>
           </group>
+          <choose>
+            <if variable="URL DOI" match="none">
+              <text value="."/>
+            </if>
+            <else>
+              <text value=","/>
+            </else>
+          </choose>
           <text macro="access"/>
         </else-if>
         <else-if type="chapter">

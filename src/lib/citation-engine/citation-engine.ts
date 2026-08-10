@@ -17,6 +17,7 @@ export async function createCitation(
     metadata: resolved.record.metadata,
     csl: resolved.record.csl,
     citations: formatted.citations,
+    citationsHtml: formatted.citationsHtml,
     bibtex: formatted.bibtex,
     provenance: {
       provider: resolved.record.provider,

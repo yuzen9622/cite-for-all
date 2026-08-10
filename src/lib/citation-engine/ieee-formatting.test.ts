@@ -49,6 +49,128 @@ describe("IEEE end-to-end formatting", () => {
     const single = { ...item, page: "94" } as CslItem
     expect(formatAllCitations(single).citations.ieee).toContain("p. 94")
   })
+
+  it("separates conference location, date, and pages per the official template, with a comma before doi and no publisher", () => {
+    const conf: CslItem = {
+      id: "10.1109/ICALT58122.2023.00123",
+      type: "paper-conference",
+      title: "Learning Analytics in Massive Open Online Courses: A Case Study",
+      author: [{ family: "Huang", given: "Wei" }],
+      issued: { "date-parts": [[2023, 7]] },
+      "container-title":
+        "2023 IEEE International Conference on Advanced Learning Technologies",
+      publisher: "IEEE",
+      "publisher-place": "Orem, UT, USA",
+      page: "123-128",
+      DOI: "10.1109/ICALT58122.2023.00123",
+    }
+    const out = formatAllCitations(conf).citations.ieee
+    expect(out).toBe(
+      '[1] W. Huang, “Learning analytics in massive open online courses: A case study,” in 2023 IEEE International Conference on Advanced Learning Technologies, Orem, UT, USA, Jul. 2023, pp. 123–128, doi: 10.1109/ICALT58122.2023.00123.'
+    )
+    // 官方會議格式無出版商欄位，也非 ". doi:"
+    expect(out).not.toContain("USA: IEEE")
+    expect(out).not.toMatch(/\. doi: /)
+  })
+
+  it("keeps Title Case for book titles (only quoted titles are sentence-cased)", () => {
+    const book: CslItem = {
+      id: "isbn-xxxx",
+      type: "book",
+      title: "Learning Analytics Explained",
+      author: [{ family: "Ferguson", given: "Rebecca" }],
+      issued: { "date-parts": [[2019]] },
+      publisher: "Routledge",
+      "publisher-place": "New York, NY, USA",
+      edition: "2",
+    }
+    expect(formatAllCitations(book).citations.ieee).toContain(
+      "Learning Analytics Explained"
+    )
+  })
+
+  it("renders the accessed date without a leading zero on the day", () => {
+    const web: CslItem = {
+      id: "web-1",
+      type: "webpage",
+      title: "IEEE Reference Guide",
+      author: [{ literal: "IEEE" }],
+      issued: { "date-parts": [[2023, 11, 29]] },
+      accessed: { "date-parts": [[2025, 6, 1]] },
+      URL: "https://ieeeauthorcenter.ieee.org/ieee-reference-guide",
+    }
+    const out = formatAllCitations(web).citations.ieee
+    expect(out).toContain("Accessed: Jun. 1, 2025")
+    expect(out).not.toContain("Jun. 01, 2025")
+  })
+})
+
+describe("IEEE rich-text (HTML) output", () => {
+  const item: CslItem = {
+    id: "10.1109/TLT.2013.6177701",
+    type: "article-journal",
+    title: "Big Data and Learning Analytics in Higher Education",
+    author: [{ family: "Gašević", given: "Dragan" }],
+    issued: { "date-parts": [[2014, 2]] },
+    "container-title": "IEEE Transactions on Learning Technologies",
+    "container-title-short": "IEEE Trans. Learn. Technol.",
+    volume: "7",
+    issue: "1",
+    page: "94-107",
+    DOI: "10.1109/TLT.2013.6177701",
+  }
+
+  it("emits italics for the periodical name and et al.", () => {
+    const out = formatAllCitations(item).citationsHtml.ieee
+    expect(out).toContain("<i>IEEE Trans. Learn. Technol.</i>")
+
+    const many: CslItem = {
+      ...item,
+      id: "many",
+      author: Array.from({ length: 8 }, (_, n) => ({
+        family: `Author${n + 1}`,
+        given: "A",
+      })),
+    }
+    expect(formatAllCitations(many).citationsHtml.ieee).toContain(
+      "<i>et al.</i>"
+    )
+  })
+
+  it("keeps book titles in Title Case with italics", () => {
+    const book: CslItem = {
+      id: "book-1",
+      type: "book",
+      title: "Learning Analytics Explained",
+      author: [{ family: "Ferguson", given: "Rebecca" }],
+      issued: { "date-parts": [[2019]] },
+      publisher: "Routledge",
+      "publisher-place": "New York, NY, USA",
+    }
+    const out = formatAllCitations(book).citationsHtml.ieee
+    expect(out).toContain("<i>Learning Analytics Explained</i>")
+    expect(out).not.toContain("learning analytics explained")
+  })
+
+  it("escapes markup inside metadata in the HTML output", () => {
+    const evil = {
+      ...item,
+      id: "evil",
+      title: "<script>alert(1)</script> A Safe Title",
+    } as CslItem
+    const out = formatAllCitations(evil).citationsHtml.ieee
+    expect(out).not.toContain("<script>")
+    // citeproc 以數值實體（&#60;）或命名實體（&lt;）跳脫 metadata 內容
+    expect(out).toMatch(/&(?:lt|#60);script&(?:gt|#62);/)
+  })
+
+  it("provides an HTML variant for every plain-text style", () => {
+    const all = formatAllCitations(item)
+    expect(Object.keys(all.citationsHtml).sort()).toEqual(
+      Object.keys(all.citations).sort()
+    )
+    expect(all.citations.ieee).not.toContain("<i>")
+  })
 })
 
 describe("IEEE journal abbreviation", () => {
