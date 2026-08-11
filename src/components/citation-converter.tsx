@@ -28,10 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  useCitationConverter,
-  type InputMode,
-} from "@/hooks/use-citation-converter"
+import { useCitationConverter } from "@/hooks/use-citation-converter"
 import { sanitizeHtml } from "@/lib/sanitize-html"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
@@ -158,35 +155,6 @@ export function CitationConverter() {
       </section>
 
       <Card className="gap-0 rounded-none border border-foreground/90 bg-card/80 py-0 shadow-[0_20px_60px_rgb(20_36_31/0.10)] backdrop-blur-sm">
-        <CardHeader className="flex min-h-[62px] flex-row items-center justify-between gap-4 rounded-none border-b bg-secondary/50 px-3 py-2.5 sm:px-5">
-          <Tabs
-            value={converter.mode}
-            onValueChange={(value) =>
-              converter.changeMode(value as InputMode)
-            }
-          >
-            <TabsList className="h-10 rounded-none border bg-card p-1">
-              <TabsTrigger
-                value="single"
-                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
-              >
-                單筆轉換
-              </TabsTrigger>
-              <TabsTrigger
-                value="batch"
-                className="rounded-none px-4 data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
-              >
-                批次轉換
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <p className="hidden text-xs text-muted-foreground sm:block">
-            {converter.mode === "batch"
-              ? `每行一筆，單次最多 ${converter.MAX_BATCH_SIZE} 筆`
-              : "支援 DOI、DOI URL 或 paper title"}
-          </p>
-        </CardHeader>
-
         <CardContent className="grid min-h-[620px] grid-cols-1 p-0 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <section className="border-b p-4 sm:p-7 lg:border-r lg:border-b-0">
             <div className="mb-5 flex items-start justify-between gap-5">
@@ -195,9 +163,7 @@ export function CitationConverter() {
                   01 / INPUT
                 </span>
                 <h2 className="font-heading text-2xl font-semibold">
-                  {converter.mode === "single"
-                    ? "輸入一筆文獻"
-                    : "輸入文獻清單"}
+                  輸入文獻清單
                 </h2>
               </div>
               <Button
@@ -221,9 +187,7 @@ export function CitationConverter() {
               maxLength={7500}
               aria-invalid={Boolean(converter.error)}
               placeholder={
-                converter.mode === "single"
-                  ? "例如：10.3102/0034654315581420"
-                  : "10.3102/0034654315581420\n10.1109/tlt.2023.3259013\n或每行貼上一個完整 paper title"
+                "10.3102/0034654315581420\n10.1109/tlt.2023.3259013\n或每行貼上一個完整 paper title"
               }
               spellCheck={false}
               className="field-sizing-fixed h-[270px] min-h-[270px] resize-none overflow-auto rounded-none bg-[linear-gradient(rgb(20_36_31/0.055)_1px,transparent_1px)] bg-[length:100%_32px] bg-card px-5 py-4 font-mono text-sm leading-8 shadow-none"

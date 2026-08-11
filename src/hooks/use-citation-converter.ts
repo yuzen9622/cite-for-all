@@ -17,12 +17,8 @@ import {
   formatRisExport,
 } from "@/lib/export-citations"
 
-export type InputMode = "single" | "batch"
-
-const EXAMPLES: Record<InputMode, string> = {
-  single: "10.3102/0034654315581420",
-  batch: "10.3102/0034654315581420\n10.1109/tlt.2023.3259013",
-}
+const EXAMPLE_INPUT =
+  "10.3102/0034654315581420\n10.1109/tlt.2023.3259013"
 
 interface ApiResponse {
   results?: CitationResult[]
@@ -46,7 +42,6 @@ function downloadTextFile(content: string, filename: string, type: string) {
 }
 
 export function useCitationConverter() {
-  const [mode, setMode] = useState<InputMode>("single")
   const [rawInput, setRawInput] = useState("")
   const [style, setStyle] = useState<CitationStyle>("apa")
   const [startNumber, setStartNumber] = useState(1)
@@ -74,20 +69,13 @@ export function useCitationConverter() {
       message: result.error,
     }))
 
-  function changeMode(nextMode: InputMode) {
-    setMode(nextMode)
-    setError("")
-    setResults([])
-    setRawInput("")
-  }
-
   function updateInput(value: string) {
     setRawInput(value)
     setError("")
   }
 
   function loadExample() {
-    setRawInput(EXAMPLES[mode])
+    setRawInput(EXAMPLE_INPUT)
     setError("")
   }
 
@@ -96,11 +84,6 @@ export function useCitationConverter() {
 
     if (!rawInput.trim()) {
       setError("請先貼上 DOI 或完整論文標題。")
-      return
-    }
-
-    if (mode === "single" && parsedInputs.length !== 1) {
-      setError("單筆模式一次只能輸入一筆；多筆資料請切換到批次模式。")
       return
     }
 
@@ -292,7 +275,6 @@ export function useCitationConverter() {
   }
 
   return {
-    mode,
     rawInput,
     style,
     results,
@@ -303,8 +285,6 @@ export function useCitationConverter() {
     parsedInputs,
     successfulResults,
     failedResults,
-    MAX_BATCH_SIZE,
-    changeMode,
     updateInput,
     loadExample,
     setStyle,
