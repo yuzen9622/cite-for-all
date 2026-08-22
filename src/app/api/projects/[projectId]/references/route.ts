@@ -59,6 +59,16 @@ const reorderSchema = z
   })
   .strict()
 
+const bulkDeleteSchema = z
+  .object({
+    referenceIds: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .max(MAX_REFERENCES_PER_PROJECT)
+      .refine((ids) => new Set(ids).size === ids.length),
+  })
+  .strict()
+
 type ReferenceMetadata = z.infer<typeof metadataSchema>
 
 class CapacityError extends Error {}
@@ -390,6 +400,54 @@ export async function POST(
     }
 
     console.error("[references] Unable to create references", error)
+    return databaseUnavailable()
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ projectId: string }> }
+) {
+  const identity = await getUserId()
+  if (identity.response) {
+    return identity.response
+  }
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return json({ error: "請提供有效的 JSON 請求。" }, 400)
+  }
+
+  const parsed = bulkDeleteSchema.safeParse(body)
+  if (!parsed.success) {
+    return json({ error: "文獻刪除資料格式不符合規定。" }, 400)
+  }
+
+  const { projectId } = await context.params
+
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId: identity.userId },
+      select: { id: true },
+    })
+
+    if (!project) {
+      return json({ error: "找不到此專案。" }, 404)
+    }
+
+    const deleted = await prisma.reference.deleteMany({
+      where: {
+        id: { in: parsed.data.referenceIds },
+        projectId,
+        project: { userId: identity.userId },
+      },
+    })
+
+    return json({ success: true, deleted: deleted.count })
+  } catch (error) {
+    console.error("[references] Unable to delete references", error)
     return databaseUnavailable()
   }
 }

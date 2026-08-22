@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import Link from "next/link"
 import {
   ArrowRight,
   Check,
@@ -9,7 +9,6 @@ import {
   FolderPlus,
   LoaderCircle,
 } from "lucide-react"
-import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,96 +33,9 @@ import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
 
-interface ProjectSummary {
-  id: string
-  name: string
-  _count: { references: number }
-}
-
 export function CitationConverter() {
   const converter = useCitationConverter()
   const failedCount = converter.failedResults.length
-  const [saveOpen, setSaveOpen] = useState(false)
-  const [saveProjects, setSaveProjects] = useState<ProjectSummary[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState("")
-  const [newProjectName, setNewProjectName] = useState("")
-  const [saveError, setSaveError] = useState("")
-  const [loadingProjects, setLoadingProjects] = useState(false)
-
-  async function openSavePanel() {
-    setSaveOpen(true)
-    setSaveError("")
-    setLoadingProjects(true)
-
-    try {
-      const response = await fetch("/api/projects", {
-        headers: { "Cache-Control": "no-cache" },
-      })
-      const payload = (await response.json()) as {
-        projects?: ProjectSummary[]
-        error?: string
-      }
-
-      if (!response.ok || !payload.projects) {
-        setSaveError(
-          response.status === 401
-            ? "請先登入，才能儲存到專案。"
-            : payload.error || "無法載入專案。"
-        )
-        return
-      }
-
-      setSaveProjects(payload.projects)
-      setSelectedProjectId(payload.projects[0]?.id ?? "")
-    } catch {
-      setSaveError("無法連線到專案服務，請稍後再試。")
-    } finally {
-      setLoadingProjects(false)
-    }
-  }
-
-  async function saveCurrentResults() {
-    setSaveError("")
-    let projectId = selectedProjectId
-
-    if (!projectId) {
-      if (!newProjectName.trim()) {
-        setSaveError("請選擇專案，或輸入新專案名稱。")
-        return
-      }
-
-      try {
-        const response = await fetch("/api/projects", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newProjectName.trim() }),
-        })
-        const payload = (await response.json()) as {
-          project?: ProjectSummary
-          error?: string
-        }
-        if (!response.ok || !payload.project) {
-          toast.error(payload.error || "建立專案失敗。")
-          return
-        }
-        projectId = payload.project.id
-        setSaveProjects((current) => [
-          ...current,
-          payload.project as ProjectSummary,
-        ])
-        setNewProjectName("")
-        toast.success(`已建立專案「${payload.project.name}」。`)
-      } catch {
-        toast.error("無法連線到專案服務，請稍後再試。")
-        return
-      }
-    }
-
-    const saved = await converter.saveToProject(projectId)
-    if (saved) {
-      setSaveOpen(false)
-    }
-  }
 
   return (
     <>
@@ -226,7 +138,7 @@ export function CitationConverter() {
             </Button>
 
             <p className="mt-4 text-xs leading-6 text-muted-foreground">
-              未登入時只做即時查詢；登入後可將結果儲存到自己的專案。正式投稿前仍建議依目標期刊規範複核。
+              未登入時只做即時查詢；登入後可到「我的專案」頁面內直接輸入 DOI 或標題加入文獻。正式投稿前仍建議依目標期刊規範複核。
             </p>
           </section>
 
@@ -291,111 +203,25 @@ export function CitationConverter() {
                         <Download />
                         下載 .ris
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void openSavePanel()}
-                        disabled={converter.saving}
-                        className="flex-1 rounded-none sm:flex-none"
-                      >
-                        <FolderPlus />
-                        儲存到專案
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              render={<Link href="/projects" />}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 rounded-none sm:flex-none"
+                            />
+                          }
+                        >
+                          <FolderPlus /> 前往專案頁加入文獻
+                        </TooltipTrigger>
+                        <TooltipContent>前往專案頁建立或加入文獻</TooltipContent>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
-
-                {saveOpen && (
-                  <div className="mt-5 border border-foreground/30 bg-secondary/40 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-heading text-lg font-semibold">
-                          儲存到專案
-                        </h3>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          伺服器會重新產生引用快照，不接受瀏覽器送來的格式化字串。
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSaveOpen(false)}
-                      >
-                        關閉
-                      </Button>
-                    </div>
-
-                    {loadingProjects ? (
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        正在載入專案…
-                      </p>
-                    ) : saveError ? (
-                      <div className="mt-4 space-y-3 text-sm">
-                        <p className="text-destructive" role="alert">
-                          {saveError}
-                        </p>
-                        {saveError.includes("請先登入") && (
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="h-auto px-0 font-semibold text-accent underline underline-offset-4"
-                            onClick={() => {
-                              window.location.href = "/api/auth/signin?callbackUrl=/"
-                            }}
-                          >
-                            前往登入
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                        {saveProjects.length > 0 && (
-                          <label className="grid gap-1 text-sm sm:col-span-2">
-                            <span className="font-semibold">選擇既有專案</span>
-                            <select
-                              value={selectedProjectId}
-                              onChange={(event) =>
-                                setSelectedProjectId(event.target.value)
-                              }
-                              className="h-10 rounded-none border border-input bg-background px-3"
-                            >
-                              {saveProjects.map((project) => (
-                                <option key={project.id} value={project.id}>
-                                  {project.name}（{project._count.references} 筆）
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        )}
-                        <label className="grid gap-1 text-sm">
-                          <span className="font-semibold">或建立新專案</span>
-                          <Input
-                            value={newProjectName}
-                            onChange={(event) => {
-                              setNewProjectName(event.target.value)
-                              if (event.target.value) {
-                                setSelectedProjectId("")
-                              }
-                            }}
-                            maxLength={100}
-                            placeholder="例如：IEEE ToE 文獻"
-                            className="rounded-none"
-                          />
-                        </label>
-                        <Button
-                          type="button"
-                          onClick={() => void saveCurrentResults()}
-                          disabled={converter.saving}
-                          className="self-end rounded-none"
-                        >
-                          {converter.saving ? "儲存中…" : "確認儲存"}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {failedCount > 0 && (
                   <div

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   projectFindFirst: vi.fn(),
+  referenceDeleteMany: vi.fn(),
   transaction: vi.fn(),
   rebuild: vi.fn(),
   cslFromMetadata: vi.fn(),
@@ -12,6 +13,7 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }))
 vi.mock("@/lib/db", () => ({
   prisma: {
     project: { findFirst: mocks.projectFindFirst },
+    reference: { deleteMany: mocks.referenceDeleteMany },
     $transaction: mocks.transaction,
   },
 }))
@@ -20,7 +22,11 @@ vi.mock("@/lib/references/reference-writer", () => ({
   cslFromMetadata: mocks.cslFromMetadata,
 }))
 
-import { PATCH, POST } from "@/app/api/projects/[projectId]/references/route"
+import {
+  DELETE,
+  PATCH,
+  POST,
+} from "@/app/api/projects/[projectId]/references/route"
 
 const context = { params: Promise.resolve({ projectId: "project-1" }) }
 
@@ -35,6 +41,14 @@ function request(items: unknown[]) {
 function reorderRequest(referenceIds: unknown[]) {
   return new Request("http://localhost/api/projects/project-1/references", {
     method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ referenceIds }),
+  })
+}
+
+function bulkDeleteRequest(referenceIds: unknown[]) {
+  return new Request("http://localhost/api/projects/project-1/references", {
+    method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ referenceIds }),
   })
@@ -282,6 +296,89 @@ describe("PATCH /api/projects/[projectId]/references", () => {
         project: { userId: "user-1" },
       },
       data: { sortOrder: 2 },
+    })
+  })
+})
+
+describe("DELETE /api/projects/[projectId]/references", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } })
+    mocks.projectFindFirst.mockResolvedValue({ id: "project-1" })
+  })
+
+  it("returns 401 before querying the project", async () => {
+    mocks.auth.mockResolvedValue(null)
+
+    const response = await DELETE(bulkDeleteRequest(["r1"]), context)
+
+    expect(response.status).toBe(401)
+    expect(mocks.projectFindFirst).not.toHaveBeenCalled()
+  })
+
+  it("rejects malformed JSON", async () => {
+    const response = await DELETE(
+      new Request("http://localhost/api/projects/project-1/references", {
+        method: "DELETE",
+        body: "{",
+      }),
+      context
+    )
+
+    expect(response.status).toBe(400)
+  })
+
+  it("rejects duplicate reference IDs before deleting", async () => {
+    const response = await DELETE(bulkDeleteRequest(["r1", "r1"]), context)
+
+    expect(response.status).toBe(400)
+    expect(mocks.referenceDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it("rejects an empty reference ID list", async () => {
+    const response = await DELETE(bulkDeleteRequest([]), context)
+
+    expect(response.status).toBe(400)
+    expect(mocks.referenceDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it("returns 404 for a project the user does not own", async () => {
+    mocks.projectFindFirst.mockResolvedValue(null)
+
+    const response = await DELETE(bulkDeleteRequest(["r1"]), context)
+
+    expect(response.status).toBe(404)
+    expect(mocks.referenceDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it("deletes the requested references", async () => {
+    mocks.referenceDeleteMany.mockResolvedValue({ count: 2 })
+
+    const response = await DELETE(bulkDeleteRequest(["r1", "r2"]), context)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      deleted: 2,
+    })
+    expect(mocks.referenceDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ["r1", "r2"] },
+        projectId: "project-1",
+        project: { userId: "user-1" },
+      },
+    })
+  })
+
+  it("returns the deleted count when only some requested references exist", async () => {
+    mocks.referenceDeleteMany.mockResolvedValue({ count: 1 })
+
+    const response = await DELETE(bulkDeleteRequest(["r1", "r2"]), context)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      deleted: 1,
     })
   })
 })

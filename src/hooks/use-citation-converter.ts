@@ -25,12 +25,6 @@ interface ApiResponse {
   error?: string
 }
 
-interface SaveResponse {
-  created?: Array<unknown>
-  skipped?: Array<unknown>
-  error?: string
-}
-
 function downloadTextFile(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
@@ -47,7 +41,6 @@ export function useCitationConverter() {
   const [startNumber, setStartNumber] = useState(1)
   const [results, setResults] = useState<CitationResult[]>([])
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
 
@@ -76,6 +69,12 @@ export function useCitationConverter() {
 
   function loadExample() {
     setRawInput(EXAMPLE_INPUT)
+    setError("")
+  }
+
+  function clearResults() {
+    setResults([])
+    setRawInput("")
     setError("")
   }
 
@@ -227,59 +226,11 @@ export function useCitationConverter() {
     }
   }
 
-  async function saveToProject(projectId: string) {
-    if (successfulResults.length === 0) {
-      toast.error("目前沒有可儲存的文獻。")
-      return false
-    }
-
-    setSaving(true)
-
-    try {
-      const response = await fetch(`/api/projects/${projectId}/references`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: successfulResults.map((result) => ({
-            input: result.input,
-            inputType: result.data.inputType,
-            metadata: result.data.metadata,
-            csl: result.data.csl,
-            provenance: result.data.provenance,
-          })),
-        }),
-      })
-      const payload = (await response.json()) as SaveResponse
-
-      if (!response.ok) {
-        toast.error(payload.error || "儲存失敗，請稍後再試。")
-        return false
-      }
-
-      const createdCount = payload.created?.length ?? 0
-      const skippedCount = payload.skipped?.length ?? 0
-      if (skippedCount) {
-        toast.success(`已儲存 ${createdCount} 筆文獻。`, {
-          description: `${skippedCount} 筆因 DOI 重複而略過。`,
-        })
-      } else {
-        toast.success(`已儲存 ${createdCount} 筆文獻。`)
-      }
-      return true
-    } catch {
-      toast.error("無法連線到專案服務，請稍後再試。")
-      return false
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return {
     rawInput,
     style,
     results,
     loading,
-    saving,
     error,
     copied,
     parsedInputs,
@@ -287,6 +238,7 @@ export function useCitationConverter() {
     failedResults,
     updateInput,
     loadExample,
+    clearResults,
     setStyle,
     convert,
     citationText,
@@ -299,6 +251,5 @@ export function useCitationConverter() {
     copyRichText,
     downloadAll,
     downloadRis,
-    saveToProject,
   }
 }
