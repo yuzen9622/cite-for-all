@@ -3,11 +3,22 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { FolderOpen, Plus, Trash2 } from "lucide-react"
+import {
+  FolderOpen,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
-import { SiteHeader } from "@/components/site-header"
+import { AppShell } from "@/components/layout/app-shell"
+import {
+  clearPendingConversion,
+  usePendingConversion,
+} from "@/lib/anonymous-session"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogBackdrop,
@@ -18,6 +29,12 @@ import {
   DialogTitle,
   DialogViewport,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -40,6 +57,31 @@ const styles = [
   ["bibtex", "BibTeX"],
 ] as const
 
+function getStyleLabel(styleKey: string) {
+  const found = styles.find(([k]) => k === styleKey.toLowerCase())
+  return found ? found[1] : styleKey.toUpperCase()
+}
+
+function formatRelativeTime(dateStr: string) {
+  try {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    if (diffSeconds < 60) return "剛剛更新"
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    if (diffMinutes < 60) return `${diffMinutes} 分鐘前更新`
+    const diffHours = Math.floor(diffMinutes / 60)
+    if (diffHours < 24) return `${diffHours} 小時前更新`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 30) return `${diffDays} 天前更新`
+    const diffMonths = Math.floor(diffDays / 30)
+    if (diffMonths < 12) return `${diffMonths} 個月前更新`
+    return date.toLocaleDateString("zh-TW")
+  } catch {
+    return "最近更新"
+  }
+}
+
 interface ProjectDashboardProps {
   initialProjects: ProjectSummary[]
   loadError?: string
@@ -59,6 +101,17 @@ export function ProjectDashboard({
   const [loadError, setLoadError] = useState(initialLoadError ?? "")
   const [reloading, setReloading] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const pendingConversion = usePendingConversion()
+
+  // Rename state
+  const [projectToRename, setProjectToRename] = useState<ProjectSummary | null>(
+    null,
+  )
+  const [renameName, setRenameName] = useState("")
+  const [renaming, setRenaming] = useState(false)
+  const [renameError, setRenameError] = useState("")
+
+  // Delete state
   const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(
     null,
   )
@@ -140,24 +193,40 @@ export function ProjectDashboard({
     }
   }
 
-  async function renameProject(project: ProjectSummary) {
-    const nextName = window.prompt("請輸入新的專案名稱", project.name)?.trim()
-    if (!nextName || nextName === project.name) {
+  function openRenameDialog(project: ProjectSummary) {
+    setProjectToRename(project)
+    setRenameName(project.name)
+    setRenameError("")
+  }
+
+  async function handleRenameProject() {
+    const project = projectToRename
+    if (!project) return
+
+    const trimmed = renameName.trim()
+    if (!trimmed) {
+      setRenameError("請輸入專案名稱。")
+      return
+    }
+    if (trimmed === project.name) {
+      setProjectToRename(null)
       return
     }
 
+    setRenaming(true)
+    setRenameError("")
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nextName }),
+        body: JSON.stringify({ name: trimmed }),
       })
       const payload = (await response.json()) as {
         project?: ProjectSummary
         error?: string
       }
       if (!response.ok || !payload.project) {
-        toast.error(payload.error || "重新命名失敗。")
+        setRenameError(payload.error || "重新命名失敗。")
         return
       }
       setProjects((current) =>
@@ -165,9 +234,12 @@ export function ProjectDashboard({
           item.id === project.id ? (payload.project as ProjectSummary) : item,
         ),
       )
-      toast.success(`已更名為「${nextName}」。`)
+      setProjectToRename(null)
+      toast.success(`已更名為「${trimmed}」。`)
     } catch {
-      toast.error("無法連線到專案服務，請稍後再試。")
+      setRenameError("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setRenaming(false)
     }
   }
 
@@ -184,8 +256,6 @@ export function ProjectDashboard({
       })
       const payload = (await response.json()) as { error?: string }
       if (!response.ok) {
-        // The dialog stays open so the user can retry; the toast still shows
-        // because sonner stacks above the dialog backdrop.
         toast.error(payload.error || "刪除專案失敗。")
         return
       }
@@ -200,8 +270,12 @@ export function ProjectDashboard({
   }
 
   return (
-    <>
-      <SiteHeader />
+    <AppShell
+      projects={projects}
+      onProjectCreated={(newProject) => {
+        setProjects((current) => [newProject as ProjectSummary, ...current])
+      }}
+    >
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-7 sm:py-12">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
@@ -215,7 +289,7 @@ export function ProjectDashboard({
           <div className="flex items-center gap-3">
             <Link
               href="/convert"
-              className="text-sm font-semibold text-muted-foreground hover:text-accent"
+              className="text-sm font-semibold text-muted-foreground hover:text-accent transition-colors"
             >
               快速轉換
             </Link>
@@ -231,6 +305,41 @@ export function ProjectDashboard({
             )}
           </div>
         </div>
+
+        {pendingConversion && (
+          <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-accent/40 bg-accent/10 p-4">
+            <div className="flex items-center gap-3">
+              <Sparkles className="size-5 text-accent shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  您剛才快速轉換了 {pendingConversion.count} 筆文獻尚未保存
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  建立新專案即可自動載入並儲存這些文獻。
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                size="sm"
+                onClick={openCreateDialog}
+                className="rounded-none"
+              >
+                <Plus className="size-4" /> 建立專案並儲存
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => clearPendingConversion()}
+                className="rounded-none text-muted-foreground hover:text-foreground"
+              >
+                忽略
+              </Button>
+            </div>
+          </div>
+        )}
 
         {loadError ? (
           <Card className="rounded-none border-foreground/30">
@@ -271,54 +380,79 @@ export function ProjectDashboard({
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {projects.map((project) => (
-              <Card key={project.id} className="rounded-none">
-                <CardHeader>
-                  <CardTitle className="flex items-start justify-between gap-3 text-xl">
+              <div
+                key={project.id}
+                onClick={() => router.push(`/projects/${project.id}`)}
+                className="group relative flex flex-col justify-between rounded-none border border-border bg-card p-5 transition-colors hover:border-accent cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="min-w-0 break-words hover:text-accent"
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-heading text-xl font-semibold tracking-[-0.04em] text-foreground group-hover:text-accent transition-colors"
                     >
                       {project.name}
                     </Link>
-                    <span className="shrink-0 text-xs font-normal text-muted-foreground">
-                      {project._count?.references ?? 0} 筆
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="min-h-10 text-sm text-muted-foreground">
+
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative shrink-0"
+                    >
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="size-8 p-0 rounded-none text-muted-foreground hover:text-foreground"
+                              aria-label="專案選單"
+                            />
+                          }
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openRenameDialog(project)}
+                          >
+                            <Pencil className="size-4" />
+                            <span>重新命名</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setProjectToDelete(project)}
+                          >
+                            <Trash2 className="size-4" />
+                            <span>刪除專案</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground">
                     {project.description || "沒有專案描述"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    預設格式：{project.defaultStyle.toUpperCase()}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void renameProject(project)}
-                      className="rounded-none"
-                    >
-                      重新命名
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setProjectToDelete(project)}
-                      className="rounded-none text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="size-4" /> 刪除專案
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {project._count?.references ?? 0} 筆文獻
+                  </span>
+                  <span>·</span>
+                  <span>預設 {getStyleLabel(project.defaultStyle)}</span>
+                  <span>·</span>
+                  <span>{formatRelativeTime(project.updatedAt)}</span>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </main>
 
+      {/* Create Dialog */}
       <Dialog
         open={createDialogOpen}
         onOpenChange={(nextOpen) => {
@@ -359,12 +493,12 @@ export function ProjectDashboard({
                       className="min-h-24 rounded-none"
                     />
                   </label>
-                  <label className="grid content-start gap-1 text-sm">
+                  <label className="grid gap-1 text-sm">
                     <span className="font-semibold">預設引用格式</span>
                     <select
                       value={defaultStyle}
                       onChange={(event) => setDefaultStyle(event.target.value)}
-                      className="h-10 rounded-none border border-input bg-background px-3"
+                      className="h-10 rounded-none border border-input bg-card px-3 text-sm"
                     >
                       {styles.map(([value, label]) => (
                         <option key={value} value={value}>
@@ -381,19 +515,19 @@ export function ProjectDashboard({
                   </p>
                 )}
 
-                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <div className="mt-6 flex justify-end gap-2">
                   <DialogClose
                     render={
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         disabled={submitting}
-                        className="rounded-none border-foreground/30 bg-background"
-                      />
+                        className="rounded-none"
+                      >
+                        取消
+                      </Button>
                     }
-                  >
-                    取消
-                  </DialogClose>
+                  />
                   <Button
                     type="button"
                     onClick={() => void createProject()}
@@ -409,6 +543,80 @@ export function ProjectDashboard({
         </DialogPortal>
       </Dialog>
 
+      {/* Rename Dialog */}
+      <Dialog
+        open={projectToRename !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !renaming) {
+            setProjectToRename(null)
+            setRenameError("")
+          }
+        }}
+      >
+        <DialogPortal>
+          <DialogBackdrop />
+          <DialogViewport>
+            <DialogPopup className="rounded-none">
+              <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
+                <DialogTitle>重新命名專案</DialogTitle>
+                <DialogDescription className="mt-1">
+                  請輸入新的專案名稱。
+                </DialogDescription>
+
+                <div className="mt-4">
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-semibold">專案名稱</span>
+                    <Input
+                      value={renameName}
+                      onChange={(event) => setRenameName(event.target.value)}
+                      maxLength={100}
+                      className="rounded-none"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          void handleRenameProject()
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {renameError && (
+                  <p className="mt-3 text-sm text-destructive" role="alert">
+                    {renameError}
+                  </p>
+                )}
+
+                <div className="mt-6 flex justify-end gap-2">
+                  <DialogClose
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={renaming}
+                        className="rounded-none"
+                      >
+                        取消
+                      </Button>
+                    }
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => void handleRenameProject()}
+                    disabled={renaming}
+                    className="rounded-none"
+                  >
+                    {renaming ? "儲存中…" : "儲存"}
+                  </Button>
+                </div>
+              </div>
+            </DialogPopup>
+          </DialogViewport>
+        </DialogPortal>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={projectToDelete !== null}
         onOpenChange={(nextOpen) => {
@@ -420,28 +628,27 @@ export function ProjectDashboard({
         <DialogPortal>
           <DialogBackdrop />
           <DialogViewport>
-            <DialogPopup>
+            <DialogPopup className="rounded-none">
               <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
                 <DialogTitle>刪除專案</DialogTitle>
                 <DialogDescription className="mt-1">
-                  確定要刪除「{projectToDelete?.name}」及其中的{" "}
-                  {projectToDelete?._count?.references ?? 0}{" "}
-                  筆文獻嗎？此動作無法復原。
+                  確定要刪除「{projectToDelete?.name}」嗎？
+                  專案內的所有文獻也會一併被刪除，此動作無法復原。
                 </DialogDescription>
 
-                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <div className="mt-6 flex justify-end gap-2">
                   <DialogClose
                     render={
                       <Button
                         type="button"
                         variant="outline"
                         disabled={deleting}
-                        className="rounded-none border-foreground/30 bg-background"
-                      />
+                        className="rounded-none"
+                      >
+                        取消
+                      </Button>
                     }
-                  >
-                    取消
-                  </DialogClose>
+                  />
                   <Button
                     type="button"
                     variant="destructive"
@@ -449,7 +656,7 @@ export function ProjectDashboard({
                     disabled={deleting}
                     className="rounded-none"
                   >
-                    {deleting ? "刪除中…" : "刪除專案"}
+                    {deleting ? "刪除中…" : "確認刪除"}
                   </Button>
                 </div>
               </div>
@@ -457,6 +664,6 @@ export function ProjectDashboard({
           </DialogViewport>
         </DialogPortal>
       </Dialog>
-    </>
+    </AppShell>
   )
 }

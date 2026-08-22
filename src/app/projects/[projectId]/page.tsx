@@ -52,6 +52,7 @@ import {
   type EditableReference,
 } from "@/components/projects/reference-editor"
 import { SiteHeader } from "@/components/site-header"
+import { AppShell } from "@/components/layout/app-shell"
 import { cn } from "@/lib/utils"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import {
@@ -742,12 +743,11 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <>
-        <SiteHeader />
+      <AppShell>
         <main className="mx-auto max-w-5xl px-4 py-12 text-sm text-muted-foreground">
           正在載入專案…
         </main>
-      </>
+      </AppShell>
     )
   }
 
@@ -777,8 +777,7 @@ export default function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <>
-        <SiteHeader />
+      <AppShell>
         <main className="mx-auto max-w-5xl px-4 py-12">
           <p className="text-sm text-destructive" role="alert">
             {error || "找不到此專案。"}
@@ -787,13 +786,12 @@ export default function ProjectDetailPage() {
             回到專案列表
           </Link>
         </main>
-      </>
+      </AppShell>
     )
   }
 
   return (
-    <>
-      <SiteHeader />
+    <AppShell>
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-7 sm:py-12">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
@@ -1027,6 +1025,6 @@ export default function ProjectDetailPage() {
           </DialogViewport>
         </DialogPortal>
       </Dialog>
-    </>
+    </AppShell>
   )
 }

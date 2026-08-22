@@ -55,15 +55,33 @@ function hasMissingClientId(url: string | null) {
   }
 }
 
-export function SignInDialog() {
-  const [open, setOpen] = useState(false)
+interface SignInDialogProps {
+  trigger?: React.ReactElement | null
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  callbackUrl?: string
+}
+
+export function SignInDialog({
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  callbackUrl = "/",
+}: SignInDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+
   const [pendingProvider, setPendingProvider] = useState<AuthProvider | null>(
     null,
   )
   const [error, setError] = useState("")
 
   function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen)
+    if (!isControlled) {
+      setInternalOpen(nextOpen)
+    }
+    controlledOnOpenChange?.(nextOpen)
     if (!nextOpen) {
       setError("")
       setPendingProvider(null)
@@ -76,7 +94,7 @@ export function SignInDialog() {
 
     try {
       const result = await signIn(provider, {
-        callbackUrl: "/",
+        callbackUrl,
         redirect: false,
       })
 
@@ -105,18 +123,24 @@ export function SignInDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="rounded-none"
-          />
-        }
-      >
-        登入
-      </DialogTrigger>
+      {trigger !== undefined ? (
+        trigger ? (
+          <DialogTrigger render={trigger} />
+        ) : null
+      ) : (
+        <DialogTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-none"
+            />
+          }
+        >
+          登入
+        </DialogTrigger>
+      )}
       <DialogPortal>
         <DialogBackdrop />
         <DialogViewport>
