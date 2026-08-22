@@ -42,24 +42,18 @@ export interface ProviderRecord {
 export interface MetadataProvider {
   readonly name: ProviderName
   getByDoi?(doi: string, signal?: AbortSignal): Promise<ProviderRecord | null>
-  searchByTitle?(
-    title: string,
-    signal?: AbortSignal
-  ): Promise<ProviderRecord[]>
+  searchByTitle?(title: string, signal?: AbortSignal): Promise<ProviderRecord[]>
 }
 
 export type ProviderFailureKind =
-  | "not-found"
-  | "rate-limited"
-  | "unavailable"
-  | "invalid-response"
+  "not-found" | "rate-limited" | "unavailable" | "invalid-response"
 
 export class ProviderError extends Error {
   constructor(
     public readonly provider: ProviderName,
     public readonly kind: ProviderFailureKind,
     message: string,
-    public readonly status?: number
+    public readonly status?: number,
   ) {
     super(message)
     this.name = "ProviderError"

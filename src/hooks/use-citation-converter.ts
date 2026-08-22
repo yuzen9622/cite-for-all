@@ -17,8 +17,7 @@ import {
   formatRisExport,
 } from "@/lib/export-citations"
 
-const EXAMPLE_INPUT =
-  "10.3102/0034654315581420\n10.1109/tlt.2023.3259013"
+const EXAMPLE_INPUT = "10.3102/0034654315581420\n10.1109/tlt.2023.3259013"
 
 interface ApiResponse {
   results?: CitationResult[]
@@ -50,11 +49,11 @@ export function useCitationConverter() {
     .map((result, index) => ({ result, index }))
     .filter(
       (
-        entry
+        entry,
       ): entry is {
         result: Extract<CitationResult, { success: false }>
         index: number
-      } => !entry.result.success
+      } => !entry.result.success,
     )
     .map(({ result, index }) => ({
       order: index + 1,
@@ -109,7 +108,9 @@ export function useCitationConverter() {
 
       setResults(payload.results)
 
-      const succeeded = payload.results.filter((result) => result.success).length
+      const succeeded = payload.results.filter(
+        (result) => result.success,
+      ).length
       const failed = payload.results.length - succeeded
       if (succeeded === 0) {
         toast.error(`${failed} 筆都找不到相符的文獻。`)
@@ -142,7 +143,7 @@ export function useCitationConverter() {
   function citationTextAt(
     result: Extract<CitationResult, { success: true }>,
     style: CitationStyle,
-    index: number
+    index: number,
   ) {
     return citationExportText(result.data, style, index, startNumber)
   }
@@ -150,7 +151,7 @@ export function useCitationConverter() {
   function citationHtmlAt(
     result: Extract<CitationResult, { success: true }>,
     style: CitationStyle,
-    index: number
+    index: number,
   ) {
     return citationExportHtml(result.data, style, index, startNumber)
   }
@@ -159,7 +160,7 @@ export function useCitationConverter() {
     return formatCitationExport(
       successfulResults.map((result) => result.data),
       style,
-      startNumber
+      startNumber,
     )
   }
 
@@ -167,11 +168,15 @@ export function useCitationConverter() {
     return formatCitationExportHtml(
       successfulResults.map((result) => result.data),
       style,
-      startNumber
+      startNumber,
     )
   }
 
-  async function copyRichText(text: string, html: string | undefined, copyId: string) {
+  async function copyRichText(
+    text: string,
+    html: string | undefined,
+    copyId: string,
+  ) {
     try {
       if (html && typeof ClipboardItem !== "undefined") {
         await navigator.clipboard.write([
@@ -185,7 +190,9 @@ export function useCitationConverter() {
       }
       setCopied(copyId)
       window.setTimeout(() => setCopied(null), 1800)
-      toast.success(html ? "已複製（貼上 Office 會保留斜體）。" : "已複製到剪貼簿。")
+      toast.success(
+        html ? "已複製（貼上 Office 會保留斜體）。" : "已複製到剪貼簿。",
+      )
     } catch {
       try {
         await navigator.clipboard.writeText(text)
@@ -202,11 +209,7 @@ export function useCitationConverter() {
     const extension = style === "bibtex" ? "bib" : "txt"
     const filename = `citations-${style}.${extension}`
     try {
-      downloadTextFile(
-        allCitationText(),
-        filename,
-        "text/plain;charset=utf-8"
-      )
+      downloadTextFile(allCitationText(), filename, "text/plain;charset=utf-8")
       toast.success(`已下載 ${filename}。`)
     } catch {
       toast.error("下載失敗，請稍後再試。")
@@ -218,7 +221,7 @@ export function useCitationConverter() {
       downloadTextFile(
         formatRisExport(successfulResults.map((result) => result.data)),
         "citations.ris",
-        "application/x-research-info-systems;charset=utf-8"
+        "application/x-research-info-systems;charset=utf-8",
       )
       toast.success("已下載 citations.ris。")
     } catch {

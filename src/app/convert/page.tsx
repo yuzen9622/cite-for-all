@@ -1,5 +1,5 @@
-import { CitationConverter } from "@/components/citation-converter";
+import { CitationConverter } from "@/components/citation-converter"
 
 export default function ConvertPage() {
-  return <CitationConverter />;
+  return <CitationConverter />
 }

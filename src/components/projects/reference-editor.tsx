@@ -76,7 +76,7 @@ export function ReferenceEditor({
             publisher,
             url,
           }),
-        }
+        },
       )
       const payload = (await response.json()) as {
         reference?: EditableReference
@@ -96,7 +96,10 @@ export function ReferenceEditor({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 border border-foreground/30 bg-secondary/30 p-4">
+    <form
+      onSubmit={submit}
+      className="space-y-4 border border-foreground/30 bg-secondary/30 p-4"
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1 text-sm sm:col-span-2">
           <span className="font-semibold">標題</span>

@@ -116,12 +116,12 @@ describe("POST /api/projects/[projectId]/references", () => {
           findMany: vi.fn(),
           create,
         },
-      })
+      }),
     )
 
     const response = await POST(
       request([item, { ...item, input: "second" }]),
-      context
+      context,
     )
 
     expect(response.status).toBe(409)
@@ -139,7 +139,7 @@ describe("POST /api/projects/[projectId]/references", () => {
           findMany,
           create,
         },
-      })
+      }),
     )
 
     const response = await POST(request([item]), context)
@@ -173,7 +173,7 @@ describe("PATCH /api/projects/[projectId]/references", () => {
 
     const response = await PATCH(
       reorderRequest(["reference-2", "reference-1"]),
-      context
+      context,
     )
 
     expect(response.status).toBe(401)
@@ -184,7 +184,7 @@ describe("PATCH /api/projects/[projectId]/references", () => {
   it("rejects duplicate reference IDs before opening a transaction", async () => {
     const response = await PATCH(
       reorderRequest(["reference-1", "reference-1"]),
-      context
+      context,
     )
 
     expect(response.status).toBe(400)
@@ -196,7 +196,7 @@ describe("PATCH /api/projects/[projectId]/references", () => {
 
     const response = await PATCH(
       reorderRequest(["reference-2", "reference-1"]),
-      context
+      context,
     )
 
     expect(response.status).toBe(404)
@@ -214,7 +214,7 @@ describe("PATCH /api/projects/[projectId]/references", () => {
           ]),
           updateMany,
         },
-      })
+      }),
     )
 
     const response = await PATCH(reorderRequest(["reference-1"]), context)
@@ -234,12 +234,12 @@ describe("PATCH /api/projects/[projectId]/references", () => {
           ]),
           updateMany,
         },
-      })
+      }),
     )
 
     const response = await PATCH(
       reorderRequest(["reference-1", "foreign-reference"]),
-      context
+      context,
     )
 
     expect(response.status).toBe(409)
@@ -261,12 +261,12 @@ describe("PATCH /api/projects/[projectId]/references", () => {
           ]),
           updateMany,
         },
-      })
+      }),
     )
 
     const response = await PATCH(
       reorderRequest(["reference-2", "reference-1"]),
-      context
+      context,
     )
 
     expect(response.status).toBe(200)
@@ -322,7 +322,7 @@ describe("DELETE /api/projects/[projectId]/references", () => {
         method: "DELETE",
         body: "{",
       }),
-      context
+      context,
     )
 
     expect(response.status).toBe(400)

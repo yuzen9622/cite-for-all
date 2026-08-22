@@ -49,16 +49,16 @@ async function getUserId() {
   }
 }
 
-async function projectIdFromContext(
-  context: { params: Promise<{ projectId: string }> }
-) {
+async function projectIdFromContext(context: {
+  params: Promise<{ projectId: string }>
+}) {
   const { projectId } = await context.params
   return projectId
 }
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {
@@ -81,7 +81,7 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {
@@ -128,7 +128,7 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {

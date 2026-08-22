@@ -74,10 +74,10 @@ describe("CitationResolver", () => {
     })
 
     await expect(
-      resolver.resolve("Knowledge Tracing — A Review")
+      resolver.resolve("Knowledge Tracing — A Review"),
     ).resolves.toMatchObject({ inputType: "title" })
     await expect(
-      resolver.resolve("Knowlege Tracing: A Review")
+      resolver.resolve("Knowlege Tracing: A Review"),
     ).rejects.toBeInstanceOf(ResolutionError)
   })
 
@@ -149,12 +149,12 @@ describe("CitationResolver", () => {
     })
 
     const resolved = await resolver.resolve(
-      "Big Data and Learning Analytics in Higher Education"
+      "Big Data and Learning Analytics in Higher Education",
     )
     expect(resolved.inputType).toBe("title")
     expect(resolved.record.csl.author?.[0]?.family).toBe("Gašević")
     expect(resolved.record.csl["container-title"]).toBe(
-      "IEEE Transactions on Learning Technologies"
+      "IEEE Transactions on Learning Technologies",
     )
   })
 })

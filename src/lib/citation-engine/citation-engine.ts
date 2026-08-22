@@ -6,7 +6,7 @@ const resolver = new CitationResolver()
 
 export async function createCitation(
   input: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<CitationData> {
   const resolved = await resolver.resolve(input, signal)
   const formatted = formatAllCitations(resolved.record.csl)

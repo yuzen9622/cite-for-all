@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "請提供有效的 JSON 請求。" },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
@@ -30,21 +30,21 @@ export async function POST(request: Request) {
   if (inputs.length === 0) {
     return NextResponse.json(
       { error: "請至少提供一筆 DOI 或論文標題。" },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   if (inputs.length > MAX_BATCH_SIZE) {
     return NextResponse.json(
       { error: `單次最多可轉換 ${MAX_BATCH_SIZE} 筆文獻。` },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
   if (inputs.some((input) => input.length > MAX_INPUT_LENGTH)) {
     return NextResponse.json(
       { error: `單筆輸入不可超過 ${MAX_INPUT_LENGTH} 個字元。` },
-      { status: 400 }
+      { status: 400 },
     )
   }
 
@@ -59,6 +59,6 @@ export async function POST(request: Request) {
         failed: results.filter((result) => !result.success).length,
       },
     },
-    { headers: { "Cache-Control": "no-store" } }
+    { headers: { "Cache-Control": "no-store" } },
   )
 }

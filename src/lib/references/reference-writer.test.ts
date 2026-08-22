@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { cslFromMetadata, rebuildReferenceCitations } from "@/lib/references/reference-writer"
+import {
+  cslFromMetadata,
+  rebuildReferenceCitations,
+} from "@/lib/references/reference-writer"
 
 describe("reference writer", () => {
   const metadata = {

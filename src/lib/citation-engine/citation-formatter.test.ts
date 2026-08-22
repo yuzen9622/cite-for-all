@@ -21,7 +21,7 @@ const article: CslItem = {
 describe("CSL and BibTeX formatting", () => {
   it("uses the pinned APA 7 style", () => {
     expect(formatBibliography(article, "apa")).toBe(
-      "Doe, J. (2024). Test Title. Journal, 1(2), 3–4. https://doi.org/10.1000/test"
+      "Doe, J. (2024). Test Title. Journal, 1(2), 3–4. https://doi.org/10.1000/test",
     )
   })
 
@@ -90,6 +90,6 @@ describe("CSL and BibTeX formatting", () => {
       const output = formatAllCitations(item)
       expect(Object.values(output.citations).every(Boolean)).toBe(true)
       expect(output.bibtex).toMatch(/^@/)
-    }
+    },
   )
 })

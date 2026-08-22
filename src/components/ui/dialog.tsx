@@ -26,7 +26,7 @@ function DialogBackdrop({
         "transition-opacity duration-200 ease-out",
         "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         "motion-reduce:transition-none",
-        className
+        className,
       )}
       {...props}
     />
@@ -42,7 +42,7 @@ function DialogViewport({
       data-slot="dialog-viewport"
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 sm:p-6",
-        className
+        className,
       )}
       {...props}
     />
@@ -59,7 +59,7 @@ function DialogPopup({ className, ...props }: DialogPrimitive.Popup.Props) {
         "data-[starting-style]:translate-y-2 data-[starting-style]:scale-[0.97] data-[starting-style]:opacity-0",
         "data-[ending-style]:translate-y-1 data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0",
         "motion-reduce:transition-none motion-reduce:data-[ending-style]:translate-y-0 motion-reduce:data-[starting-style]:translate-y-0 motion-reduce:data-[ending-style]:scale-100 motion-reduce:data-[starting-style]:scale-100",
-        className
+        className,
       )}
       {...props}
     />
@@ -72,7 +72,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
       data-slot="dialog-title"
       className={cn(
         "font-heading text-xl font-semibold tracking-[-0.04em]",
-        className
+        className,
       )}
       {...props}
     />

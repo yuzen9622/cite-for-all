@@ -5,9 +5,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/db"
 import { normalizeDoi } from "@/lib/citation-engine/input-parser"
 import type { CslItem } from "@/lib/citation-engine/types"
-import {
-  rebuildReferenceCitations,
-} from "@/lib/references/reference-writer"
+import { rebuildReferenceCitations } from "@/lib/references/reference-writer"
 import type { CitationMetadata } from "@/lib/citations"
 
 const patchSchema = z
@@ -82,7 +80,7 @@ export async function PATCH(
   request: Request,
   context: {
     params: Promise<{ projectId: string; referenceId: string }>
-  }
+  },
 ) {
   const identity = await getUserId()
   if (identity.response) {
@@ -158,7 +156,7 @@ export async function PATCH(
     try {
       snapshot = rebuildReferenceCitations(
         reference.csl as unknown as CslItem,
-        metadata as unknown as CitationMetadata
+        metadata as unknown as CitationMetadata,
       )
     } catch (error) {
       throw new FormattingError("文獻格式無法產生，原資料未變更。", {
@@ -203,12 +201,19 @@ export async function PATCH(
       },
     })
 
-    return result ? json({ reference: result }) : json({ error: "找不到此文獻。" }, 404)
+    return result
+      ? json({ reference: result })
+      : json({ error: "找不到此文獻。" }, 404)
   } catch (error) {
     if (error instanceof FormattingError) {
       return json({ error: error.message }, 422)
     }
-    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
       return json({ error: "此 DOI 已存在於專案中。" }, 409)
     }
 
@@ -221,7 +226,7 @@ export async function DELETE(
   _request: Request,
   context: {
     params: Promise<{ projectId: string; referenceId: string }>
-  }
+  },
 ) {
   const identity = await getUserId()
   if (identity.response) {

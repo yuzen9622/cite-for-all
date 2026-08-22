@@ -21,7 +21,7 @@ export class DoiContentProvider implements MetadataProvider {
           Accept: "application/vnd.citationstyles.csl+json",
         },
       },
-      signal
+      signal,
     )
 
     if (payload === null) {
@@ -33,7 +33,7 @@ export class DoiContentProvider implements MetadataProvider {
       throw new ProviderError(
         this.name,
         "invalid-response",
-        "doi.org returned a non-object CSL response"
+        "doi.org returned a non-object CSL response",
       )
     }
 

@@ -16,7 +16,7 @@ function statusForResolutionError(error: ResolutionError) {
 
 async function convertOne(
   input: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<CitationResult> {
   try {
     const data = await createCitation(input, signal)
@@ -52,15 +52,14 @@ async function convertOne(
   }
 }
 
-export async function convertCitations(
-  inputs: string[],
-  signal?: AbortSignal
-) {
+export async function convertCitations(inputs: string[], signal?: AbortSignal) {
   const results: CitationResult[] = []
 
   for (let index = 0; index < inputs.length; index += CONCURRENCY) {
     const chunk = inputs.slice(index, index + CONCURRENCY)
-    results.push(...(await Promise.all(chunk.map((input) => convertOne(input, signal)))))
+    results.push(
+      ...(await Promise.all(chunk.map((input) => convertOne(input, signal)))),
+    )
   }
 
   return results

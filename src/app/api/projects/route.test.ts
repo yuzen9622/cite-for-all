@@ -57,7 +57,7 @@ describe("/api/projects", () => {
       new Request("http://localhost/api/projects", {
         method: "POST",
         body: JSON.stringify({ name: "" }),
-      })
+      }),
     )
 
     expect(response.status).toBe(400)
@@ -72,14 +72,14 @@ describe("/api/projects", () => {
           count: vi.fn().mockResolvedValue(50),
           create,
         },
-      })
+      }),
     )
 
     const response = await POST(
       new Request("http://localhost/api/projects", {
         method: "POST",
         body: JSON.stringify({ name: "Full" }),
-      })
+      }),
     )
 
     expect(response.status).toBe(409)

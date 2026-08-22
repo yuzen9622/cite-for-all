@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { ExternalLink } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import { SignInDialog } from "@/components/auth/sign-in-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ExternalLink } from "lucide-react"
+import { signOut, useSession } from "next-auth/react"
+import Link from "next/link"
+import { SignInDialog } from "@/components/auth/sign-in-dialog"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export function SiteHeader() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { data: session } = useSession()
+  const user = session?.user
 
   return (
     <div className="mx-auto w-full max-w-[1480px] px-3 sm:px-7">
@@ -92,5 +92,5 @@ export function SiteHeader() {
         </div>
       </header>
     </div>
-  );
+  )
 }

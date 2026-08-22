@@ -61,7 +61,7 @@ function isSerializationConflict(error: unknown) {
 }
 
 async function serializableTransaction<T>(
-  callback: (transaction: Prisma.TransactionClient) => Promise<T>
+  callback: (transaction: Prisma.TransactionClient) => Promise<T>,
 ) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {

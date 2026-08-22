@@ -1,7 +1,4 @@
-import {
-  cleanDoi,
-  normalizeDoi,
-} from "@/lib/citation-engine/input-parser"
+import { cleanDoi, normalizeDoi } from "@/lib/citation-engine/input-parser"
 import { resolveContainerTitleShort } from "@/lib/citation-engine/journal-abbreviation"
 import { stripMarkup } from "@/lib/citation-engine/title-matcher"
 import type { CitationMetadata } from "@/lib/citations"
@@ -35,9 +32,9 @@ function titleWithSubtitle(titleValue: unknown, subtitleValue: unknown) {
     return title
   }
 
-  return title.toLocaleLowerCase("en-US").endsWith(
-    subtitle.toLocaleLowerCase("en-US")
-  )
+  return title
+    .toLocaleLowerCase("en-US")
+    .endsWith(subtitle.toLocaleLowerCase("en-US"))
     ? title
     : `${title}: ${subtitle}`
 }
@@ -122,13 +119,13 @@ function cslType(value: unknown) {
     "reference-entry": "entry-encyclopedia",
   }
 
-  return type ? aliases[type] ?? type : "article-journal"
+  return type ? (aliases[type] ?? type) : "article-journal"
 }
 
 export function recordFromCsl(
   raw: Record<string, unknown>,
   provider: ProviderName,
-  fallbackId: string
+  fallbackId: string,
 ): ProviderRecord | null {
   const title = titleWithSubtitle(raw.title, raw.subtitle)
   if (!title) {
@@ -148,7 +145,7 @@ export function recordFromCsl(
         raw.published ??
         raw["published-print"] ??
         raw["published-online"] ??
-        raw.created
+        raw.created,
     ) ?? dateFromYear(raw.year)
   const csl: CslItem = {
     id: text(raw.id) ?? normalizedDoi ?? fallbackId,
@@ -159,7 +156,7 @@ export function recordFromCsl(
     "container-title": containerTitle,
     "container-title-short": resolveContainerTitleShort(
       containerTitle,
-      providerShort
+      providerShort,
     ),
     volume: stringValue(raw.volume),
     issue: stringValue(raw.issue),
@@ -217,7 +214,7 @@ function nameFromDisplayName(value: string) {
 function setOptionalCslField(
   target: CslItem,
   key: keyof CslItem,
-  value: unknown
+  value: unknown,
 ) {
   if (value === null || value === "") {
     delete target[key]
@@ -238,7 +235,7 @@ function editableString(metadata: CitationMetadata, key: string) {
 
 export function applyMetadataToCsl(
   base: CslItem,
-  metadata: CitationMetadata
+  metadata: CitationMetadata,
 ): CslItem {
   const next: CslItem = { ...base }
   const title = editableString(metadata, "title")
@@ -281,9 +278,9 @@ export function applyMetadataToCsl(
       trimmedJournal
         ? resolveContainerTitleShort(
             trimmedJournal,
-            journalChanged ? undefined : next["container-title-short"]
+            journalChanged ? undefined : next["container-title-short"],
           )
-        : null
+        : null,
     )
   }
   const volume = editableString(metadata, "volume")
@@ -312,12 +309,13 @@ export function applyMetadataToCsl(
     setOptionalCslField(next, "URL", url?.trim() ?? null)
   }
 
-  next.type = editableString(metadata, "type")?.trim() || base.type || "article-journal"
+  next.type =
+    editableString(metadata, "type")?.trim() || base.type || "article-journal"
   return next
 }
 
 export function crossrefRecord(
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
 ): ProviderRecord | null {
   const doi = text(raw.DOI)
   return recordFromCsl(
@@ -333,12 +331,12 @@ export function crossrefRecord(
       URL: raw.URL,
     },
     "crossref",
-    doi ?? text(raw.URL) ?? "crossref-record"
+    doi ?? text(raw.URL) ?? "crossref-record",
   )
 }
 
 export function dataciteRecord(
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
 ): ProviderRecord | null {
   const attributes =
     raw.attributes && typeof raw.attributes === "object"
@@ -360,9 +358,7 @@ export function dataciteRecord(
       })
     : undefined
   const title = Array.isArray(attributes.titles)
-    ? text(
-        (attributes.titles[0] as Record<string, unknown> | undefined)?.title
-      )
+    ? text((attributes.titles[0] as Record<string, unknown> | undefined)?.title)
     : text(attributes.title)
   const types =
     attributes.types && typeof attributes.types === "object"
@@ -393,12 +389,12 @@ export function dataciteRecord(
       URL: attributes.url ?? (doi ? `https://doi.org/${doi}` : undefined),
     },
     "datacite",
-    doi ?? text(raw.id) ?? "datacite-record"
+    doi ?? text(raw.id) ?? "datacite-record",
   )
 }
 
 export function openAlexRecord(
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
 ): ProviderRecord | null {
   const authorships = Array.isArray(raw.authorships) ? raw.authorships : []
   const authors = authorships.flatMap((authorship) => {
@@ -448,6 +444,6 @@ export function openAlexRecord(
       URL: primaryLocation.landing_page_url ?? raw.id,
     },
     "openalex",
-    text(raw.id) ?? doi ?? "openalex-record"
+    text(raw.id) ?? doi ?? "openalex-record",
   )
 }

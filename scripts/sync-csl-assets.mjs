@@ -2,7 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const projectRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 const engineRoot = path.join(projectRoot, "src", "lib", "citation-engine")
 const licensesRoot = path.join(projectRoot, "LICENSES")
 
@@ -62,29 +65,33 @@ for (const style of styles) {
     `https://raw.githubusercontent.com/citation-style-language/styles/${revisions.cslStyles}/${style.source}`,
     (content) =>
       content.includes("<style") &&
-      content.includes("creativecommons.org/licenses/by-sa/3.0")
+      content.includes("creativecommons.org/licenses/by-sa/3.0"),
   )
 }
 
 await save(
   path.relative(
     projectRoot,
-    path.join(engineRoot, "locales", "locales-en-US.xml")
+    path.join(engineRoot, "locales", "locales-en-US.xml"),
   ),
   `https://raw.githubusercontent.com/citation-style-language/locales/${revisions.cslLocales}/locales-en-US.xml`,
   (content) =>
     content.includes('<locale xmlns="http://purl.org/net/xbiblio/csl"') &&
-    content.includes("creativecommons.org/licenses/by-sa/3.0")
+    content.includes("creativecommons.org/licenses/by-sa/3.0"),
 )
 
 await save(
   path.relative(projectRoot, path.join(licensesRoot, "citation-js-MIT.md")),
   `https://raw.githubusercontent.com/citation-js/citation-js/${revisions.citationJs}/LICENSE.md`,
-  (content) => content.includes("MIT License")
+  (content) => content.includes("MIT License"),
 )
 
 await save(
-  path.relative(projectRoot, path.join(licensesRoot, "citeproc-js-CPAL-1.0.txt")),
+  path.relative(
+    projectRoot,
+    path.join(licensesRoot, "citeproc-js-CPAL-1.0.txt"),
+  ),
   `https://raw.githubusercontent.com/Juris-M/citeproc-js/${revisions.citeprocJs}/CPAL`,
-  (content) => content.includes("Common Public Attribution License Version 1.0")
+  (content) =>
+    content.includes("Common Public Attribution License Version 1.0"),
 )

@@ -24,7 +24,7 @@ export class OpenAlexProvider implements MetadataProvider {
       this.name,
       `https://api.openalex.org/works?${params}`,
       {},
-      signal
+      signal,
     )
     const root = asRecord(payload)
     const results = root ? asRecordArray(root.results) : []

@@ -36,8 +36,10 @@ const IEEE_JOURNALS: Record<string, string> = {
   "ieee transactions on visualization and computer graphics":
     "IEEE Trans. Vis. Comput. Graph.",
   "ieee transactions on mobile computing": "IEEE Trans. Mob. Comput.",
-  "ieee transactions on wireless communications": "IEEE Trans. Wireless Commun.",
-  "ieee transactions on antennas and propagation": "IEEE Trans. Antennas Propag.",
+  "ieee transactions on wireless communications":
+    "IEEE Trans. Wireless Commun.",
+  "ieee transactions on antennas and propagation":
+    "IEEE Trans. Antennas Propag.",
   "ieee transactions on microwave theory and techniques":
     "IEEE Trans. Microw. Theory Techn.",
   "ieee transactions on nuclear science": "IEEE Trans. Nucl. Sci.",
@@ -159,14 +161,15 @@ const COMMON_JOURNALS: Record<string, string> = {
   "educational researcher": "Educ. Res.",
   "american educational research journal": "Am. Educ. Res. J.",
   "computers in human behavior": "Comput. Hum. Behav.",
-  "science": "Science",
-  "nature": "Nature",
+  science: "Science",
+  nature: "Nature",
   "nature communications": "Nat. Commun.",
   "nature neuroscience": "Nat. Neurosci.",
   "plos one": "PLoS ONE",
   "proceedings of the national academy of sciences of the united states of america":
     "Proc. Natl. Acad. Sci. U.S.A.",
-  "proceedings of the national academy of sciences": "Proc. Natl. Acad. Sci. U.S.A.",
+  "proceedings of the national academy of sciences":
+    "Proc. Natl. Acad. Sci. U.S.A.",
   "psychological science": "Psychol. Sci.",
   "journal of applied psychology": "J. Appl. Psychol.",
   "memory & cognition": "Mem. Cognit.",
@@ -215,7 +218,7 @@ export function abbreviateJournal(fullTitle: string): string | undefined {
  */
 export function resolveContainerTitleShort(
   fullTitle: string | undefined,
-  providerShort: string | undefined
+  providerShort: string | undefined,
 ): string | undefined {
   const curated = fullTitle ? abbreviateJournal(fullTitle) : undefined
   if (curated) {

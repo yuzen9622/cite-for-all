@@ -2,8 +2,7 @@ import type { InputKind } from "@/lib/citation-engine/types"
 
 const DOI_PATTERN = /10\.\d{4,9}\/[-._;()/:a-z0-9]+/i
 const DOI_EXACT_PATTERN = /^10\.\d{4,9}\/[-._;()/:a-z0-9]+$/i
-const APA_YEAR_SEPARATOR =
-  /\(\s*(?:(?:18|19|20)\d{2}[a-z]?|n\.d\.)\s*\)\.\s+/i
+const APA_YEAR_SEPARATOR = /\(\s*(?:(?:18|19|20)\d{2}[a-z]?|n\.d\.)\s*\)\.\s+/i
 const APA_AUTHOR_WITH_INITIALS =
   /(?:^|[,&]\s*)[\p{L}][\p{L}'’-]*,\s*(?:[\p{L}]\.\s*){1,4}/u
 const APA_SOURCE_WITH_VOLUME =
@@ -77,9 +76,7 @@ function titleFromApaReference(value: string) {
   }
 
   for (const boundary of remainder.matchAll(/\.\s+/g)) {
-    const source = remainder.slice(
-      (boundary.index ?? 0) + boundary[0].length
-    )
+    const source = remainder.slice((boundary.index ?? 0) + boundary[0].length)
     if (/^[*_]/.test(source) || APA_SOURCE_WITH_VOLUME.test(source)) {
       return remainder.slice(0, (boundary.index ?? 0) + 1).trim()
     }

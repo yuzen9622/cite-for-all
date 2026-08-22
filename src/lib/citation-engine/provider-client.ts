@@ -1,7 +1,4 @@
-import {
-  ProviderError,
-  type ProviderName,
-} from "@/lib/citation-engine/types"
+import { ProviderError, type ProviderName } from "@/lib/citation-engine/types"
 
 const RETRYABLE_STATUSES = new Set([429, 502, 503, 504])
 const DEFAULT_TIMEOUT_MS = 8_000
@@ -28,7 +25,7 @@ function delay(milliseconds: number, signal?: AbortSignal) {
         clearTimeout(timeout)
         reject(signal.reason)
       },
-      { once: true }
+      { once: true },
     )
   })
 }
@@ -42,7 +39,7 @@ export async function fetchProviderJson(
   provider: ProviderName,
   url: string,
   init: RequestInit = {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ) {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
@@ -60,22 +57,18 @@ export async function fetchProviderJson(
         return null
       }
 
-      if (
-        RETRYABLE_STATUSES.has(response.status) &&
-        attempt < MAX_RETRIES
-      ) {
+      if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
         await delay(retryDelay(response, attempt), signal)
         continue
       }
 
       if (!response.ok) {
-        const kind =
-          response.status === 429 ? "rate-limited" : "unavailable"
+        const kind = response.status === 429 ? "rate-limited" : "unavailable"
         throw new ProviderError(
           provider,
           kind,
           `${provider} returned HTTP ${response.status}`,
-          response.status
+          response.status,
         )
       }
 
@@ -97,7 +90,7 @@ export async function fetchProviderJson(
     provider,
     "unavailable",
     `${provider} request failed`,
-    undefined
+    undefined,
   )
 }
 
@@ -111,7 +104,7 @@ export function asRecordArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter(
         (item): item is Record<string, unknown> =>
-          Boolean(item) && typeof item === "object" && !Array.isArray(item)
+          Boolean(item) && typeof item === "object" && !Array.isArray(item),
       )
     : []
 }

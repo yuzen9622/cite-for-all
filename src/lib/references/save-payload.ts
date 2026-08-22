@@ -14,12 +14,12 @@ export interface ReferenceItemInput {
 }
 
 export function buildReferenceItems(
-  results: CitationResult[]
+  results: CitationResult[],
 ): ReferenceItemInput[] {
   return results
     .filter(
       (result): result is Extract<CitationResult, { success: true }> =>
-        result.success
+        result.success,
     )
     .map((result) => ({
       input: result.input,

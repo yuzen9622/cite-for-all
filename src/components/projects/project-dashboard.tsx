@@ -1,13 +1,13 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { FolderOpen, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { SiteHeader } from "@/components/site-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { FolderOpen, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { SiteHeader } from "@/components/site-header"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogBackdrop,
@@ -17,17 +17,17 @@ import {
   DialogPortal,
   DialogTitle,
   DialogViewport,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 export interface ProjectSummary {
-  id: string;
-  name: string;
-  description: string | null;
-  defaultStyle: string;
-  updatedAt: string;
-  _count?: { references: number };
+  id: string
+  name: string
+  description: string | null
+  defaultStyle: string
+  updatedAt: string
+  _count?: { references: number }
 }
 
 const styles = [
@@ -38,77 +38,77 @@ const styles = [
   ["ieee", "IEEE"],
   ["vancouver", "Vancouver"],
   ["bibtex", "BibTeX"],
-] as const;
+] as const
 
 interface ProjectDashboardProps {
-  initialProjects: ProjectSummary[];
-  loadError?: string;
+  initialProjects: ProjectSummary[]
+  loadError?: string
 }
 
 export function ProjectDashboard({
   initialProjects,
   loadError: initialLoadError,
 }: ProjectDashboardProps) {
-  const router = useRouter();
-  const [projects, setProjects] = useState<ProjectSummary[]>(initialProjects);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [defaultStyle, setDefaultStyle] = useState("apa");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [loadError, setLoadError] = useState(initialLoadError ?? "");
-  const [reloading, setReloading] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const router = useRouter()
+  const [projects, setProjects] = useState<ProjectSummary[]>(initialProjects)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [defaultStyle, setDefaultStyle] = useState("apa")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const [loadError, setLoadError] = useState(initialLoadError ?? "")
+  const [reloading, setReloading] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(
     null,
-  );
-  const [deleting, setDeleting] = useState(false);
+  )
+  const [deleting, setDeleting] = useState(false)
 
   async function loadProjects() {
-    setReloading(true);
+    setReloading(true)
     try {
       const response = await fetch("/api/projects", {
         headers: { "Cache-Control": "no-cache" },
-      });
+      })
       const payload = (await response.json()) as {
-        projects?: ProjectSummary[];
-        error?: string;
-      };
+        projects?: ProjectSummary[]
+        error?: string
+      }
       if (response.status === 401) {
-        router.refresh();
-        return;
+        router.refresh()
+        return
       }
       if (!response.ok || !payload.projects) {
-        setLoadError(payload.error || "無法載入專案。");
-        return;
+        setLoadError(payload.error || "無法載入專案。")
+        return
       }
-      setProjects(payload.projects);
-      setLoadError("");
+      setProjects(payload.projects)
+      setLoadError("")
     } catch {
-      setLoadError("無法連線到專案服務，請稍後再試。");
+      setLoadError("無法連線到專案服務，請稍後再試。")
     } finally {
-      setReloading(false);
+      setReloading(false)
     }
   }
 
   function openCreateDialog() {
-    setError("");
-    setName("");
-    setDescription("");
-    setDefaultStyle("apa");
-    setCreateDialogOpen(true);
+    setError("")
+    setName("")
+    setDescription("")
+    setDefaultStyle("apa")
+    setCreateDialogOpen(true)
   }
 
   async function createProject() {
     if (!name.trim()) {
-      setError("請輸入專案名稱。");
-      return;
+      setError("請輸入專案名稱。")
+      return
     }
 
-    setSubmitting(true);
-    setError("");
+    setSubmitting(true)
+    setError("")
     try {
-      const projectName = name.trim();
+      const projectName = name.trim()
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,33 +117,33 @@ export function ProjectDashboard({
           description: description || null,
           defaultStyle,
         }),
-      });
+      })
       const payload = (await response.json()) as {
-        project?: ProjectSummary;
-        error?: string;
-      };
-      if (!response.ok || !payload.project) {
-        toast.error(payload.error || "建立專案失敗。");
-        return;
+        project?: ProjectSummary
+        error?: string
       }
-      setProjects((current) => [payload.project as ProjectSummary, ...current]);
-      setCreateDialogOpen(false);
-      setName("");
-      setDescription("");
-      setDefaultStyle("apa");
-      toast.success(`已建立專案「${projectName}」。`);
-      router.push(`/projects/${payload.project.id}`);
+      if (!response.ok || !payload.project) {
+        toast.error(payload.error || "建立專案失敗。")
+        return
+      }
+      setProjects((current) => [payload.project as ProjectSummary, ...current])
+      setCreateDialogOpen(false)
+      setName("")
+      setDescription("")
+      setDefaultStyle("apa")
+      toast.success(`已建立專案「${projectName}」。`)
+      router.push(`/projects/${payload.project.id}`)
     } catch {
-      toast.error("無法連線到專案服務，請稍後再試。");
+      toast.error("無法連線到專案服務，請稍後再試。")
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
   async function renameProject(project: ProjectSummary) {
-    const nextName = window.prompt("請輸入新的專案名稱", project.name)?.trim();
+    const nextName = window.prompt("請輸入新的專案名稱", project.name)?.trim()
     if (!nextName || nextName === project.name) {
-      return;
+      return
     }
 
     try {
@@ -151,53 +151,51 @@ export function ProjectDashboard({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: nextName }),
-      });
+      })
       const payload = (await response.json()) as {
-        project?: ProjectSummary;
-        error?: string;
-      };
+        project?: ProjectSummary
+        error?: string
+      }
       if (!response.ok || !payload.project) {
-        toast.error(payload.error || "重新命名失敗。");
-        return;
+        toast.error(payload.error || "重新命名失敗。")
+        return
       }
       setProjects((current) =>
         current.map((item) =>
           item.id === project.id ? (payload.project as ProjectSummary) : item,
         ),
-      );
-      toast.success(`已更名為「${nextName}」。`);
+      )
+      toast.success(`已更名為「${nextName}」。`)
     } catch {
-      toast.error("無法連線到專案服務，請稍後再試。");
+      toast.error("無法連線到專案服務，請稍後再試。")
     }
   }
 
   async function confirmDeleteProject() {
-    const project = projectToDelete;
+    const project = projectToDelete
     if (!project) {
-      return;
+      return
     }
 
-    setDeleting(true);
+    setDeleting(true)
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
         method: "DELETE",
-      });
-      const payload = (await response.json()) as { error?: string };
+      })
+      const payload = (await response.json()) as { error?: string }
       if (!response.ok) {
         // The dialog stays open so the user can retry; the toast still shows
         // because sonner stacks above the dialog backdrop.
-        toast.error(payload.error || "刪除專案失敗。");
-        return;
+        toast.error(payload.error || "刪除專案失敗。")
+        return
       }
-      setProjects((current) =>
-        current.filter((item) => item.id !== project.id),
-      );
-      setProjectToDelete(null);
-      toast.success(`已刪除專案「${project.name}」。`);
+      setProjects((current) => current.filter((item) => item.id !== project.id))
+      setProjectToDelete(null)
+      toast.success(`已刪除專案「${project.name}」。`)
     } catch {
-      toast.error("無法連線到專案服務，請稍後再試。");
+      toast.error("無法連線到專案服務，請稍後再試。")
     } finally {
-      setDeleting(false);
+      setDeleting(false)
     }
   }
 
@@ -325,8 +323,8 @@ export function ProjectDashboard({
         open={createDialogOpen}
         onOpenChange={(nextOpen) => {
           if (!nextOpen && !submitting) {
-            setCreateDialogOpen(false);
-            setError("");
+            setCreateDialogOpen(false)
+            setError("")
           }
         }}
       >
@@ -415,7 +413,7 @@ export function ProjectDashboard({
         open={projectToDelete !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen && !deleting) {
-            setProjectToDelete(null);
+            setProjectToDelete(null)
           }
         }}
       >
@@ -460,5 +458,5 @@ export function ProjectDashboard({
         </DialogPortal>
       </Dialog>
     </>
-  );
+  )
 }

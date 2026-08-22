@@ -22,14 +22,12 @@ import {
 } from "@/lib/citation-engine/types"
 
 export type ResolutionFailureCode =
-  | "NOT_FOUND"
-  | "UPSTREAM_RATE_LIMITED"
-  | "UPSTREAM_UNAVAILABLE"
+  "NOT_FOUND" | "UPSTREAM_RATE_LIMITED" | "UPSTREAM_UNAVAILABLE"
 
 export class ResolutionError extends Error {
   constructor(
     public readonly code: ResolutionFailureCode,
-    message: string
+    message: string,
   ) {
     super(message)
     this.name = "ResolutionError"
@@ -43,21 +41,26 @@ interface ResolverOptions {
 }
 
 function failureFromProviderErrors(errors: ProviderError[]) {
-  if (errors.length > 0 && errors.every((error) => error.kind === "rate-limited")) {
+  if (
+    errors.length > 0 &&
+    errors.every((error) => error.kind === "rate-limited")
+  ) {
     return new ResolutionError(
       "UPSTREAM_RATE_LIMITED",
-      "文獻資料服務目前使用量較高，請稍後再試。"
+      "文獻資料服務目前使用量較高，請稍後再試。",
     )
   }
 
   return new ResolutionError(
     "UPSTREAM_UNAVAILABLE",
-    "文獻資料服務暫時無法回應，請稍後再試。"
+    "文獻資料服務暫時無法回應，請稍後再試。",
   )
 }
 
 function recordIdentity(record: ProviderRecord) {
-  return record.csl.DOI?.toLowerCase() || `${record.provider}:${record.providerId}`
+  return (
+    record.csl.DOI?.toLowerCase() || `${record.provider}:${record.providerId}`
+  )
 }
 
 export class CitationResolver {
@@ -71,17 +74,18 @@ export class CitationResolver {
       new CrossrefProvider(),
       new DataCiteProvider(),
     ]
-    this.titleProviders =
-      options.titleProviders ??
-      [
-        new CrossrefProvider(),
-        new DataCiteProvider(),
-        ...(process.env.OPENALEX_API_KEY ? [new OpenAlexProvider()] : []),
-      ]
+    this.titleProviders = options.titleProviders ?? [
+      new CrossrefProvider(),
+      new DataCiteProvider(),
+      ...(process.env.OPENALEX_API_KEY ? [new OpenAlexProvider()] : []),
+    ]
     this.cache = options.cache ?? new CitationCache<ProviderRecord>()
   }
 
-  async resolve(input: string, signal?: AbortSignal): Promise<ResolvedCitation> {
+  async resolve(
+    input: string,
+    signal?: AbortSignal,
+  ): Promise<ResolvedCitation> {
     const parsed = classifyInput(input)
 
     if (parsed.kind === "doi") {
@@ -143,7 +147,7 @@ export class CitationResolver {
 
     throw new ResolutionError(
       "NOT_FOUND",
-      "找不到完全符合此 DOI 的文獻，未產生引用。"
+      "找不到完全符合此 DOI 的文獻，未產生引用。",
     )
   }
 
@@ -186,7 +190,7 @@ export class CitationResolver {
     if (exactMatches.size > 1) {
       throw new ResolutionError(
         "NOT_FOUND",
-        "標題對應到多筆文獻，為避免誤引，未產生引用。"
+        "標題對應到多筆文獻，為避免誤引，未產生引用。",
       )
     }
 
@@ -206,7 +210,7 @@ export class CitationResolver {
 
     throw new ResolutionError(
       "NOT_FOUND",
-      "找不到標題完全相符的文獻，未產生引用。"
+      "找不到標題完全相符的文獻，未產生引用。",
     )
   }
 
@@ -218,7 +222,7 @@ export class CitationResolver {
    */
   private async enrichWithAuthoritativeDoi(
     matched: ProviderRecord,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ProviderRecord> {
     const doi = matched.csl.DOI
     if (!doi) {

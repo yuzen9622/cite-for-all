@@ -115,7 +115,7 @@ function withCanonicalDoi(metadata: ReferenceMetadata): ReferenceMetadata {
 
 function baseCsl(
   value: Record<string, unknown> | undefined,
-  metadata: ReferenceMetadata
+  metadata: ReferenceMetadata,
 ) {
   const fallback = cslFromMetadata(metadata as unknown as CitationMetadata)
   const merged = value ? { ...fallback, ...value } : fallback
@@ -157,7 +157,7 @@ function isUniqueConflict(error: unknown) {
 }
 
 async function serializableTransaction<T>(
-  callback: (transaction: Prisma.TransactionClient) => Promise<T>
+  callback: (transaction: Prisma.TransactionClient) => Promise<T>,
 ) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -176,7 +176,7 @@ async function serializableTransaction<T>(
 
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {
@@ -223,7 +223,7 @@ export async function PATCH(
 
       const maxSortOrder = references.reduce(
         (maximum, reference) => Math.max(maximum, reference.sortOrder),
-        0
+        0,
       )
       const temporaryOffset = maxSortOrder + references.length + 1
 
@@ -266,7 +266,7 @@ export async function PATCH(
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {
@@ -302,7 +302,10 @@ export async function POST(
         where: { projectId, project: { userId: identity.userId } },
       })
 
-      if (currentCount + parsed.data.items.length > MAX_REFERENCES_PER_PROJECT) {
+      if (
+        currentCount + parsed.data.items.length >
+        MAX_REFERENCES_PER_PROJECT
+      ) {
         throw new CapacityError("此專案最多只能儲存 500 筆文獻。")
       }
 
@@ -326,7 +329,7 @@ export async function POST(
           })
         : []
       const seenDois = new Set(
-        existing.map((reference) => reference.doi).filter(Boolean)
+        existing.map((reference) => reference.doi).filter(Boolean),
       )
       const skipped: Array<{ input: string; reason: string }> = []
       const created = []
@@ -342,13 +345,12 @@ export async function POST(
         try {
           snapshot = rebuildReferenceCitations(
             baseCsl(item.csl, metadata),
-            metadata as unknown as CitationMetadata
+            metadata as unknown as CitationMetadata,
           )
         } catch (error) {
-          throw new FormattingError(
-            "文獻格式無法產生，未寫入任何資料。",
-            { cause: error }
-          )
+          throw new FormattingError("文獻格式無法產生，未寫入任何資料。", {
+            cause: error,
+          })
         }
 
         const reference = await transaction.reference.create({
@@ -406,7 +408,7 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ projectId: string }> },
 ) {
   const identity = await getUserId()
   if (identity.response) {

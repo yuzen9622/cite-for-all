@@ -1,8 +1,8 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   DndContext,
   KeyboardSensor,
@@ -13,15 +13,15 @@ import {
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
-} from "@dnd-kit/core";
+} from "@dnd-kit/core"
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import {
   ArrowLeft,
   Check,
@@ -30,10 +30,10 @@ import {
   GripVertical,
   Pencil,
   Trash2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogBackdrop,
@@ -43,52 +43,52 @@ import {
   DialogPortal,
   DialogTitle,
   DialogViewport,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { InlineConverter } from "@/components/projects/inline-converter";
-import { ReferenceBatchBar } from "@/components/projects/reference-batch-bar";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { InlineConverter } from "@/components/projects/inline-converter"
+import { ReferenceBatchBar } from "@/components/projects/reference-batch-bar"
 import {
   ReferenceEditor,
   type EditableReference,
-} from "@/components/projects/reference-editor";
-import { SiteHeader } from "@/components/site-header";
-import { cn } from "@/lib/utils";
-import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations";
+} from "@/components/projects/reference-editor"
+import { SiteHeader } from "@/components/site-header"
+import { cn } from "@/lib/utils"
+import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import {
   citationExportText,
   formatCitationExport,
   formatRisExport,
   type CitationExportRecord,
-} from "@/lib/export-citations";
+} from "@/lib/export-citations"
 
 export interface StoredReference extends EditableReference {
-  projectId: string;
-  sortOrder: number;
-  input: string;
-  inputType: string;
-  provider: string | null;
-  itemType: string | null;
-  citations: Record<string, string>;
-  bibtex: string;
-  isEdited: boolean;
+  projectId: string
+  sortOrder: number
+  input: string
+  inputType: string
+  provider: string | null
+  itemType: string | null
+  citations: Record<string, string>
+  bibtex: string
+  isEdited: boolean
 }
 
 export interface ProjectData {
-  id: string;
-  name: string;
-  description: string | null;
-  defaultStyle: string;
-  references: StoredReference[];
+  id: string
+  name: string
+  description: string | null
+  defaultStyle: string
+  references: StoredReference[]
 }
 
 function downloadTextFile(content: string, filename: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 function exportRecord(reference: StoredReference): CitationExportRecord {
@@ -108,28 +108,28 @@ function exportRecord(reference: StoredReference): CitationExportRecord {
     },
     citations: reference.citations as CitationExportRecord["citations"],
     bibtex: reference.bibtex,
-  };
+  }
 }
 
 interface SortableReferenceProps {
-  reference: StoredReference;
-  index: number;
-  startNumber: number;
-  style: CitationStyle;
-  projectId: string;
-  isEditing: boolean;
-  dragDisabled: boolean;
-  actionsDisabled: boolean;
-  selected: boolean;
-  selectionDisabled: boolean;
-  dragGroupIds: Set<string>;
-  activeDragId: string | null;
-  dragOffset: { x: number; y: number };
-  onToggleSelected: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onSaved: (reference: EditableReference) => void;
-  onCancel: () => void;
+  reference: StoredReference
+  index: number
+  startNumber: number
+  style: CitationStyle
+  projectId: string
+  isEditing: boolean
+  dragDisabled: boolean
+  actionsDisabled: boolean
+  selected: boolean
+  selectionDisabled: boolean
+  dragGroupIds: Set<string>
+  activeDragId: string | null
+  dragOffset: { x: number; y: number }
+  onToggleSelected: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onSaved: (reference: EditableReference) => void
+  onCancel: () => void
 }
 
 function SortableReference({
@@ -159,12 +159,12 @@ function SortableReference({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: reference.id, disabled: dragDisabled });
-  const isGrouped = dragGroupIds.has(reference.id);
-  const isFollower = isGrouped && activeDragId !== reference.id;
+  } = useSortable({ id: reference.id, disabled: dragDisabled })
+  const isGrouped = dragGroupIds.has(reference.id)
+  const isFollower = isGrouped && activeDragId !== reference.id
   const displayTransform = isFollower
     ? `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0)`
-    : CSS.Transform.toString(transform);
+    : CSS.Transform.toString(transform)
 
   return (
     <div
@@ -262,173 +262,172 @@ function SortableReference({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 export default function ProjectDetailPage() {
-  const params = useParams<{ projectId: string }>();
-  const projectId = params.projectId;
-  const [project, setProject] = useState<ProjectData | null>(null);
-  const [style, setStyle] = useState<CitationStyle>("apa");
-  const [startNumber, setStartNumber] = useState(1);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [requiresLogin, setRequiresLogin] = useState(false);
-  const [reorderPending, setReorderPending] = useState(false);
-  const [reorderStatus, setReorderStatus] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const params = useParams<{ projectId: string }>()
+  const projectId = params.projectId
+  const [project, setProject] = useState<ProjectData | null>(null)
+  const [style, setStyle] = useState<CitationStyle>("apa")
+  const [startNumber, setStartNumber] = useState(1)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [requiresLogin, setRequiresLogin] = useState(false)
+  const [reorderPending, setReorderPending] = useState(false)
+  const [reorderStatus, setReorderStatus] = useState("")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleteTarget, setDeleteTarget] = useState<{
-    ids: string[];
-    count: number;
-  } | null>(null);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [dragGroup, setDragGroup] = useState<Set<string>>(new Set());
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    ids: string[]
+    count: number
+  } | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const [dragGroup, setDragGroup] = useState<Set<string>>(new Set())
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-  );
+  )
 
   const loadProject = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
         headers: { "Cache-Control": "no-cache" },
-      });
+      })
       const payload = (await response.json()) as {
-        project?: ProjectData;
-        error?: string;
-      };
+        project?: ProjectData
+        error?: string
+      }
       if (response.status === 401) {
-        setRequiresLogin(true);
+        setRequiresLogin(true)
       }
       if (!response.ok || !payload.project) {
-        setError(payload.error || "無法載入專案。");
-        return;
+        setError(payload.error || "無法載入專案。")
+        return
       }
-      setProject(payload.project);
+      setProject(payload.project)
       setStyle(
         STYLE_OPTIONS.some(
           (option) => option.id === payload.project?.defaultStyle,
         )
           ? (payload.project.defaultStyle as CitationStyle)
           : "apa",
-      );
+      )
     } catch {
-      setError("無法連線到專案服務，請稍後再試。");
+      setError("無法連線到專案服務，請稍後再試。")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [projectId]);
+  }, [projectId])
 
   useEffect(() => {
     // This effect synchronizes the page with the remote project record.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadProject();
-  }, [loadProject]);
+    void loadProject()
+  }, [loadProject])
 
-  const selectedCount = selectedIds.size;
+  const selectedCount = selectedIds.size
   const allSelected =
     project !== null &&
     project.references.length > 0 &&
-    selectedCount === project.references.length;
+    selectedCount === project.references.length
   const selectedReferences = useMemo(
     () =>
       project?.references.filter((reference) =>
         selectedIds.has(reference.id),
       ) ?? [],
     [project, selectedIds],
-  );
-  const selectionDisabled =
-    reorderPending || editingId !== null || bulkDeleting;
+  )
+  const selectionDisabled = reorderPending || editingId !== null || bulkDeleting
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {
-      const next = new Set(current);
+      const next = new Set(current)
       if (next.has(id)) {
-        next.delete(id);
+        next.delete(id)
       } else {
-        next.add(id);
+        next.add(id)
       }
-      return next;
-    });
+      return next
+    })
   }
 
   function toggleSelectAll() {
     if (!project) {
-      return;
+      return
     }
 
     setSelectedIds(
       allSelected
         ? new Set()
         : new Set(project.references.map((reference) => reference.id)),
-    );
+    )
   }
 
   const records = useMemo(
     () => project?.references.map(exportRecord) ?? [],
     [project?.references],
-  );
+  )
   const allText = useMemo(
     () => formatCitationExport(records, style, startNumber),
     [records, startNumber, style],
-  );
+  )
 
   async function copyAll() {
     try {
-      await navigator.clipboard.writeText(allText);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-      toast.success(`已複製 ${records.length} 筆引用。`);
+      await navigator.clipboard.writeText(allText)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+      toast.success(`已複製 ${records.length} 筆引用。`)
     } catch {
-      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。");
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
   }
 
   function downloadAll() {
-    const filename = `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`;
+    const filename = `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`
     try {
-      downloadTextFile(allText, filename, "text/plain;charset=utf-8");
-      toast.success(`已下載 ${filename}。`);
+      downloadTextFile(allText, filename, "text/plain;charset=utf-8")
+      toast.success(`已下載 ${filename}。`)
     } catch {
-      toast.error("下載失敗，請稍後再試。");
+      toast.error("下載失敗，請稍後再試。")
     }
   }
 
   function downloadRis() {
-    const filename = `${project?.name ?? "project"}.ris`;
+    const filename = `${project?.name ?? "project"}.ris`
     try {
       downloadTextFile(
         formatRisExport(records),
         filename,
         "application/x-research-info-systems;charset=utf-8",
-      );
-      toast.success(`已下載 ${filename}。`);
+      )
+      toast.success(`已下載 ${filename}。`)
     } catch {
-      toast.error("下載失敗，請稍後再試。");
+      toast.error("下載失敗，請稍後再試。")
     }
   }
 
   async function deleteReference(reference: StoredReference) {
     if (!window.confirm(`確定要刪除「${reference.title}」嗎？`)) {
-      return;
+      return
     }
 
     try {
       const response = await fetch(
         `/api/projects/${projectId}/references/${reference.id}`,
         { method: "DELETE" },
-      );
-      const payload = (await response.json()) as { error?: string };
+      )
+      const payload = (await response.json()) as { error?: string }
       if (!response.ok) {
-        toast.error(payload.error || "刪除文獻失敗。");
-        return;
+        toast.error(payload.error || "刪除文獻失敗。")
+        return
       }
       setProject((current) =>
         current
@@ -439,15 +438,15 @@ export default function ProjectDetailPage() {
               ),
             }
           : current,
-      );
+      )
       setSelectedIds((current) => {
-        const next = new Set(current);
-        next.delete(reference.id);
-        return next;
-      });
-      toast.success(`已刪除「${reference.title}」。`);
+        const next = new Set(current)
+        next.delete(reference.id)
+        return next
+      })
+      toast.success(`已刪除「${reference.title}」。`)
     } catch {
-      toast.error("無法連線到文獻服務，請稍後再試。");
+      toast.error("無法連線到文獻服務，請稍後再試。")
     }
   }
 
@@ -461,8 +460,8 @@ export default function ProjectDetailPage() {
             ),
           }
         : current,
-    );
-    setEditingId(null);
+    )
+    setEditingId(null)
   }
 
   function handleConverterSaved(created: StoredReference[]) {
@@ -470,7 +469,7 @@ export default function ProjectDetailPage() {
       current
         ? { ...current, references: [...current.references, ...created] }
         : current,
-    );
+    )
   }
 
   function moveSelected(direction: "top" | "bottom") {
@@ -479,21 +478,21 @@ export default function ProjectDetailPage() {
       selectedIds.size === 0 ||
       selectedIds.size === project.references.length
     ) {
-      return;
+      return
     }
 
     const selectedRows = project.references.filter((reference) =>
       selectedIds.has(reference.id),
-    );
+    )
     const rest = project.references.filter(
       (reference) => !selectedIds.has(reference.id),
-    );
+    )
     const nextReferences =
       direction === "top"
         ? [...selectedRows, ...rest]
-        : [...rest, ...selectedRows];
+        : [...rest, ...selectedRows]
 
-    void saveOrder(nextReferences.map((reference) => reference.id));
+    void saveOrder(nextReferences.map((reference) => reference.id))
   }
 
   async function copySelected() {
@@ -504,15 +503,15 @@ export default function ProjectDetailPage() {
           style,
           startNumber,
         ),
-      );
-      toast.success(`已複製 ${selectedReferences.length} 筆引用。`);
+      )
+      toast.success(`已複製 ${selectedReferences.length} 筆引用。`)
     } catch {
-      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。");
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
   }
 
   function downloadSelected() {
-    const filename = `${project?.name ?? "project"}-selected-${style}.${style === "bibtex" ? "bib" : "txt"}`;
+    const filename = `${project?.name ?? "project"}-selected-${style}.${style === "bibtex" ? "bib" : "txt"}`
     try {
       downloadTextFile(
         formatCitationExport(
@@ -522,48 +521,48 @@ export default function ProjectDetailPage() {
         ),
         filename,
         "text/plain;charset=utf-8",
-      );
-      toast.success(`已下載 ${filename}。`);
+      )
+      toast.success(`已下載 ${filename}。`)
     } catch {
-      toast.error("下載失敗，請稍後再試。");
+      toast.error("下載失敗，請稍後再試。")
     }
   }
 
   function downloadSelectedRis() {
-    const filename = `${project?.name ?? "project"}-selected.ris`;
+    const filename = `${project?.name ?? "project"}-selected.ris`
     try {
       downloadTextFile(
         formatRisExport(selectedReferences.map(exportRecord)),
         filename,
         "application/x-research-info-systems;charset=utf-8",
-      );
-      toast.success(`已下載 ${filename}。`);
+      )
+      toast.success(`已下載 ${filename}。`)
     } catch {
-      toast.error("下載失敗，請稍後再試。");
+      toast.error("下載失敗，請稍後再試。")
     }
   }
 
   async function confirmBulkDelete() {
-    const target = deleteTarget;
+    const target = deleteTarget
     if (!target) {
-      return;
+      return
     }
 
-    setBulkDeleting(true);
+    setBulkDeleting(true)
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referenceIds: target.ids }),
-      });
+      })
       const payload = (await response.json()) as {
-        deleted?: number;
-        error?: string;
-      };
+        deleted?: number
+        error?: string
+      }
 
       if (!response.ok) {
-        toast.error(payload.error || "刪除文獻失敗。");
-        return;
+        toast.error(payload.error || "刪除文獻失敗。")
+        return
       }
 
       setProject((current) =>
@@ -575,170 +574,170 @@ export default function ProjectDetailPage() {
               ),
             }
           : current,
-      );
-      setSelectedIds(new Set());
-      setDeleteTarget(null);
-      toast.success(`已刪除 ${payload.deleted ?? target.count} 筆文獻。`);
+      )
+      setSelectedIds(new Set())
+      setDeleteTarget(null)
+      toast.success(`已刪除 ${payload.deleted ?? target.count} 筆文獻。`)
     } catch {
-      toast.error("無法連線到文獻服務，請稍後再試。");
+      toast.error("無法連線到文獻服務，請稍後再試。")
     } finally {
-      setBulkDeleting(false);
+      setBulkDeleting(false)
     }
   }
 
   async function saveOrder(ids: string[]) {
     if (!project || reorderPending || editingId) {
-      return;
+      return
     }
 
-    const previousReferences = project.references;
-    const previousIds = new Set(previousReferences.map((r) => r.id));
+    const previousReferences = project.references
+    const previousIds = new Set(previousReferences.map((r) => r.id))
     const nextReferences = ids.map((id, index) => ({
       ...previousReferences.find((reference) => reference.id === id)!,
       sortOrder: index + 1,
-    }));
+    }))
 
     // 排序請求期間可能有內嵌轉換器並行新增文獻；套用/回滾時都要保留
     // 不在排序清單中的新項目，避免被舊快照覆蓋造成前後端不同步。
     const applySorted = (current: ProjectData | null) => {
       if (!current) {
-        return current;
+        return current
       }
       const additions = current.references.filter(
         (reference) => !previousIds.has(reference.id),
-      );
+      )
       return additions.length
         ? { ...current, references: [...nextReferences, ...additions] }
-        : { ...current, references: nextReferences };
-    };
+        : { ...current, references: nextReferences }
+    }
     const rollbackSorted = (current: ProjectData | null) => {
       if (!current) {
-        return current;
+        return current
       }
       const additions = current.references.filter(
         (reference) => !previousIds.has(reference.id),
-      );
+      )
       return additions.length
         ? { ...current, references: [...previousReferences, ...additions] }
-        : { ...current, references: previousReferences };
-    };
+        : { ...current, references: previousReferences }
+    }
 
-    setProject(applySorted);
-    setReorderPending(true);
-    setReorderStatus("正在儲存新排序…");
+    setProject(applySorted)
+    setReorderPending(true)
+    setReorderStatus("正在儲存新排序…")
 
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referenceIds: ids }),
-      });
-      const payload = (await response.json()) as { error?: string };
+      })
+      const payload = (await response.json()) as { error?: string }
 
       if (!response.ok) {
-        throw new Error(payload.error || "儲存文獻排序失敗。");
+        throw new Error(payload.error || "儲存文獻排序失敗。")
       }
 
-      toast.success("已儲存新的文獻排序。");
+      toast.success("已儲存新的文獻排序。")
     } catch (reorderError) {
-      setProject(rollbackSorted);
+      setProject(rollbackSorted)
       toast.error(
         reorderError instanceof Error
           ? reorderError.message
           : "無法連線到文獻服務，請稍後再試。",
-      );
+      )
     } finally {
       // The outcome is announced by the toast; this line only reports progress.
-      setReorderStatus("");
-      setReorderPending(false);
+      setReorderStatus("")
+      setReorderPending(false)
     }
   }
 
   function reorderReferences(activeId: string, overId: string) {
     if (!project || activeId === overId || reorderPending || editingId) {
-      return;
+      return
     }
 
     const oldIndex = project.references.findIndex(
       (item) => item.id === activeId,
-    );
-    const newIndex = project.references.findIndex((item) => item.id === overId);
+    )
+    const newIndex = project.references.findIndex((item) => item.id === overId)
     if (oldIndex < 0 || newIndex < 0) {
-      return;
+      return
     }
 
     const nextIds = arrayMove(project.references, oldIndex, newIndex).map(
       (reference) => reference.id,
-    );
-    void saveOrder(nextIds);
+    )
+    void saveOrder(nextIds)
   }
 
   function handleDragStart(event: DragStartEvent) {
-    const activeId = String(event.active.id);
-    setActiveDragId(activeId);
+    const activeId = String(event.active.id)
+    setActiveDragId(activeId)
     if (project && selectedIds.has(activeId) && selectedIds.size > 1) {
       const group = project.references
         .filter((reference) => selectedIds.has(reference.id))
-        .map((reference) => reference.id);
-      setDragGroup(new Set(group));
+        .map((reference) => reference.id)
+      setDragGroup(new Set(group))
     } else {
-      setDragGroup(new Set([activeId]));
+      setDragGroup(new Set([activeId]))
     }
   }
 
   function handleDragMove(event: DragMoveEvent) {
-    setDragOffset({ x: event.delta.x, y: event.delta.y });
+    setDragOffset({ x: event.delta.x, y: event.delta.y })
   }
 
   function resetDragState() {
-    setActiveDragId(null);
-    setDragGroup(new Set());
-    setDragOffset({ x: 0, y: 0 });
+    setActiveDragId(null)
+    setDragGroup(new Set())
+    setDragOffset({ x: 0, y: 0 })
   }
 
   function handleDragEnd(event: DragEndEvent) {
     if (!event.over) {
-      resetDragState();
-      return;
+      resetDragState()
+      return
     }
 
-    const activeId = String(event.active.id);
-    const overId = String(event.over.id);
+    const activeId = String(event.active.id)
+    const overId = String(event.over.id)
     if (!project || reorderPending || editingId) {
-      resetDragState();
-      return;
+      resetDragState()
+      return
     }
 
     if (dragGroup.size > 1 && dragGroup.has(activeId)) {
       if (dragGroup.has(overId)) {
         // 目標在群組內部：群組保持相對順序，不移動
-        resetDragState();
-        return;
+        resetDragState()
+        return
       }
-      const ids = project.references.map((reference) => reference.id);
-      const groupIds = ids.filter((id) => dragGroup.has(id));
-      const offsetInGroup = groupIds.indexOf(activeId);
-      const overIndex = ids.indexOf(overId);
+      const ids = project.references.map((reference) => reference.id)
+      const groupIds = ids.filter((id) => dragGroup.has(id))
+      const offsetInGroup = groupIds.indexOf(activeId)
+      const overIndex = ids.indexOf(overId)
       // 以 active 為錨點：active 應落到 over 的位置，群組其他成員
       // 保持與 active 的相對順序一起平移，並 clamp 到陣列邊界。
       const newGroupStart = Math.max(
         0,
         Math.min(overIndex - offsetInGroup, ids.length - groupIds.length),
-      );
+      )
 
       if (newGroupStart !== ids.indexOf(groupIds[0])) {
-        const rest = ids.filter((id) => !dragGroup.has(id));
+        const rest = ids.filter((id) => !dragGroup.has(id))
         const nextIds = [
           ...rest.slice(0, newGroupStart),
           ...groupIds,
           ...rest.slice(newGroupStart),
-        ];
-        void saveOrder(nextIds);
+        ]
+        void saveOrder(nextIds)
       }
     } else {
-      void reorderReferences(activeId, overId);
+      void reorderReferences(activeId, overId)
     }
-    resetDragState();
+    resetDragState()
   }
 
   if (loading) {
@@ -749,7 +748,7 @@ export default function ProjectDetailPage() {
           正在載入專案…
         </main>
       </>
-    );
+    )
   }
 
   if (requiresLogin) {
@@ -763,7 +762,7 @@ export default function ProjectDetailPage() {
               <Button
                 type="button"
                 onClick={() => {
-                  window.location.href = `/api/auth/signin?callbackUrl=/projects/${projectId}`;
+                  window.location.href = `/api/auth/signin?callbackUrl=/projects/${projectId}`
                 }}
                 className="rounded-none"
               >
@@ -773,7 +772,7 @@ export default function ProjectDetailPage() {
           </Card>
         </main>
       </>
-    );
+    )
   }
 
   if (!project) {
@@ -789,7 +788,7 @@ export default function ProjectDetailPage() {
           </Link>
         </main>
       </>
-    );
+    )
   }
 
   return (
@@ -882,9 +881,9 @@ export default function ProjectDetailPage() {
                   max={9999}
                   value={startNumber}
                   onChange={(event) => {
-                    const value = Number.parseInt(event.target.value, 10);
+                    const value = Number.parseInt(event.target.value, 10)
                     if (Number.isInteger(value) && value > 0) {
-                      setStartNumber(Math.min(value, 9999));
+                      setStartNumber(Math.min(value, 9999))
                     }
                   }}
                   className="h-9 w-24 rounded-none"
@@ -985,7 +984,7 @@ export default function ProjectDetailPage() {
         open={deleteTarget !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen && !bulkDeleting) {
-            setDeleteTarget(null);
+            setDeleteTarget(null)
           }
         }}
       >
@@ -1029,5 +1028,5 @@ export default function ProjectDetailPage() {
         </DialogPortal>
       </Dialog>
     </>
-  );
+  )
 }

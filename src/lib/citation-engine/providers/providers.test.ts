@@ -17,12 +17,12 @@ describe("metadata providers", () => {
           DOI: "10.1000/another",
           type: "journal-article",
           title: "Another work",
-        })
-      )
+        }),
+      ),
     )
 
     await expect(
-      new DoiContentProvider().getByDoi("10.1000/requested")
+      new DoiContentProvider().getByDoi("10.1000/requested"),
     ).resolves.toBeNull()
   })
 
@@ -43,12 +43,12 @@ describe("metadata providers", () => {
               },
             ],
           },
-        })
-      )
+        }),
+      ),
     )
 
     const records = await new CrossrefProvider().searchByTitle(
-      "Main title: A subtitle"
+      "Main title: A subtitle",
     )
 
     expect(records).toHaveLength(1)
@@ -67,7 +67,7 @@ describe("metadata providers", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(
-      new OpenAlexProvider().searchByTitle("Any title")
+      new OpenAlexProvider().searchByTitle("Any title"),
     ).resolves.toEqual([])
     expect(fetchMock).not.toHaveBeenCalled()
   })

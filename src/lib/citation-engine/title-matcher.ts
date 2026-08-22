@@ -33,7 +33,7 @@ export function decodeHtmlEntities(value: string) {
       }
 
       return HTML_ENTITIES[body.toLowerCase()] ?? entity
-    }
+    },
   )
 }
 
@@ -51,12 +51,14 @@ export function normalizeTitle(value: string) {
 }
 
 function recordIdentity(record: ProviderRecord) {
-  return record.csl.DOI?.toLowerCase() || `${record.provider}:${record.providerId}`
+  return (
+    record.csl.DOI?.toLowerCase() || `${record.provider}:${record.providerId}`
+  )
 }
 
 export function findSingleExactTitleMatch(
   requestedTitle: string,
-  records: ProviderRecord[]
+  records: ProviderRecord[],
 ) {
   const result = matchExactTitle(requestedTitle, records)
   return result.kind === "single" ? result.record : null
@@ -64,7 +66,7 @@ export function findSingleExactTitleMatch(
 
 export function matchExactTitle(
   requestedTitle: string,
-  records: ProviderRecord[]
+  records: ProviderRecord[],
 ):
   | { kind: "none" }
   | { kind: "ambiguous" }
@@ -73,7 +75,7 @@ export function matchExactTitle(
   const uniqueMatches = new Map(
     records
       .filter((record) => normalizeTitle(record.metadata.title) === requested)
-      .map((record) => [recordIdentity(record), record])
+      .map((record) => [recordIdentity(record), record]),
   )
 
   if (uniqueMatches.size === 0) {
@@ -89,10 +91,10 @@ export function matchExactTitle(
 
 export function exactTitleMatches(
   requestedTitle: string,
-  records: ProviderRecord[]
+  records: ProviderRecord[],
 ) {
   const requested = normalizeTitle(requestedTitle)
   return records.filter(
-    (record) => normalizeTitle(record.metadata.title) === requested
+    (record) => normalizeTitle(record.metadata.title) === requested,
   )
 }

@@ -22,12 +22,12 @@ function record(title: string, doi: string): ProviderRecord {
 describe("strict title matching", () => {
   it("ignores only presentation differences", () => {
     expect(normalizeTitle("<i>Meta–Analysis</i>: A Review")).toBe(
-      "meta analysis a review"
+      "meta analysis a review",
     )
     expect(
       matchExactTitle("META-ANALYSIS: A REVIEW", [
         record("<i>Meta–Analysis</i>: A Review", "10.1000/a"),
-      ])
+      ]),
     ).toMatchObject({ kind: "single" })
   })
 
@@ -35,24 +35,27 @@ describe("strict title matching", () => {
     const candidate = [
       record(
         "Effectiveness of intelligent tutoring systems: A meta-analytic review",
-        "10.1000/a"
+        "10.1000/a",
       ),
     ]
 
     expect(
       matchExactTitle(
         "Effectivness of intelligent tutoring systems: A meta-analytic review",
-        candidate
-      )
+        candidate,
+      ),
     ).toEqual({ kind: "none" })
     expect(
-      matchExactTitle("Effectiveness of intelligent tutoring systems", candidate)
+      matchExactTitle(
+        "Effectiveness of intelligent tutoring systems",
+        candidate,
+      ),
     ).toEqual({ kind: "none" })
     expect(
       matchExactTitle(
         "Effectiveness of modern intelligent tutoring systems: A meta-analytic review",
-        candidate
-      )
+        candidate,
+      ),
     ).toEqual({ kind: "none" })
   })
 
@@ -61,7 +64,7 @@ describe("strict title matching", () => {
       matchExactTitle("Same title", [
         record("Same title", "10.1000/a"),
         record("Same title", "10.1000/b"),
-      ])
+      ]),
     ).toEqual({ kind: "ambiguous" })
   })
 
@@ -70,7 +73,7 @@ describe("strict title matching", () => {
       matchExactTitle("Same title", [
         record("Same title", "10.1000/a"),
         { ...record("Same title", "10.1000/a"), provider: "datacite" },
-      ])
+      ]),
     ).toMatchObject({ kind: "single" })
   })
 })

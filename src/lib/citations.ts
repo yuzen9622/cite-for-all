@@ -108,7 +108,7 @@ function cleanRisValue(value: string | number) {
 function appendRisField(
   lines: string[],
   tag: string,
-  value: string | number | null | undefined
+  value: string | number | null | undefined,
 ) {
   if (value == null) {
     return
@@ -151,7 +151,7 @@ function risRecord(metadata: CitationMetadata) {
     metadata.type === "chapter" || metadata.type === "paper-conference"
       ? "T2"
       : "JO",
-    metadata.journal
+    metadata.journal,
   )
   appendRisField(lines, "PY", metadata.year)
   appendRisField(lines, "VL", metadata.volume)
@@ -164,7 +164,7 @@ function risRecord(metadata: CitationMetadata) {
     lines,
     "UR",
     metadata.url ??
-      (metadata.doi ? `https://doi.org/${metadata.doi}` : undefined)
+      (metadata.doi ? `https://doi.org/${metadata.doi}` : undefined),
   )
   lines.push("ER  - ")
 
@@ -182,7 +182,7 @@ export function formatRis(records: CitationMetadata[]) {
 export function citationText(
   result: Extract<CitationResult, { success: true }>,
   style: CitationStyle,
-  resultIndex: number
+  resultIndex: number,
 ) {
   const raw =
     style === "bibtex"

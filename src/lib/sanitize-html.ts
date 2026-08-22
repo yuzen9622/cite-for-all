@@ -9,15 +9,7 @@
  * `onmouseover`、可夾帶腳本的 style 值都會被移除）。
  */
 
-const ALLOWED_TAGS = new Set([
-  "i",
-  "em",
-  "b",
-  "strong",
-  "sub",
-  "sup",
-  "span",
-])
+const ALLOWED_TAGS = new Set(["i", "em", "b", "strong", "sub", "sup", "span"])
 
 function sanitizeNode(node: Element) {
   for (const child of Array.from(node.children)) {

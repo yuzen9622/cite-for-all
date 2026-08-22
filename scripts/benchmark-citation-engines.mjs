@@ -163,7 +163,8 @@ const allCases = [
   },
   {
     id: "dryad-title",
-    input: "Data from: Climate, demography, and lek stability in an Amazonian bird",
+    input:
+      "Data from: Climate, demography, and lek stability in an Amazonian bird",
     valid: true,
     expectedDoi: "10.5061/dryad.5d23f",
   },
@@ -253,7 +254,7 @@ function percentile(values, percentileValue) {
   const sorted = [...values].sort((left, right) => left - right)
   const index = Math.max(
     0,
-    Math.ceil((percentileValue / 100) * sorted.length) - 1
+    Math.ceil((percentileValue / 100) * sorted.length) - 1,
   )
   return Number(sorted[index].toFixed(1))
 }
@@ -270,7 +271,9 @@ function latencyStats(results) {
   return {
     count: values.length,
     meanMs: Number(
-      (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1)
+      (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(
+        1,
+      ),
     ),
     p50Ms: percentile(values, 50),
     p95Ms: percentile(values, 95),
@@ -283,14 +286,14 @@ function normalizedResult(engine, payload) {
     return {
       success: result?.success === true,
       data: result?.success ? result.data : null,
-      errorCode: result?.success ? null : result?.code ?? null,
+      errorCode: result?.success ? null : (result?.code ?? null),
     }
   }
 
   return {
     success: payload?.success === true,
     data: payload?.success ? payload : null,
-    errorCode: payload?.success ? null : payload?.error ?? null,
+    errorCode: payload?.success ? null : (payload?.error ?? null),
   }
 }
 
@@ -377,7 +380,7 @@ function summarize(engine, results) {
   const invalidCases = cases.filter((testCase) => !testCase.valid)
   const coveredCases = validCases.filter((testCase) => {
     const attempts = engineResults.filter(
-      (result) => result.caseId === testCase.id
+      (result) => result.caseId === testCase.id,
     )
     return (
       attempts.length === rounds &&
@@ -386,7 +389,7 @@ function summarize(engine, results) {
   })
   const rejectedCases = invalidCases.filter((testCase) => {
     const attempts = engineResults.filter(
-      (result) => result.caseId === testCase.id
+      (result) => result.caseId === testCase.id,
     )
     return (
       attempts.length === rounds &&
@@ -395,7 +398,7 @@ function summarize(engine, results) {
   })
 
   const unavailableCount = engineResults.filter((result) =>
-    ["upstream-error", "transport-error"].includes(result.outcome)
+    ["upstream-error", "transport-error"].includes(result.outcome),
   ).length
 
   return {
@@ -403,9 +406,10 @@ function summarize(engine, results) {
       available: engineResults.length - unavailableCount,
       total: engineResults.length,
       rate: Number(
-        ((engineResults.length - unavailableCount) / engineResults.length).toFixed(
-          4
-        )
+        (
+          (engineResults.length - unavailableCount) /
+          engineResults.length
+        ).toFixed(4),
       ),
     },
     validCaseCoverage: {
@@ -430,16 +434,16 @@ function summarize(engine, results) {
       ].map((outcome) => [
         outcome,
         engineResults.filter((result) => result.outcome === outcome).length,
-      ])
+      ]),
     ),
     latency: {
       all: latencyStats(engineResults),
       valid: latencyStats(engineResults.filter((result) => result.valid)),
       firstObserved: latencyStats(
-        engineResults.filter((result) => result.round === 1)
+        engineResults.filter((result) => result.round === 1),
       ),
       subsequent: latencyStats(
-        engineResults.filter((result) => result.round > 1)
+        engineResults.filter((result) => result.round > 1),
       ),
     },
   }
@@ -464,7 +468,7 @@ for (let round = 1; round <= rounds; round += 1) {
       results.push(result)
       process.stdout.write(
         `${engine.padEnd(11)} r${round} ${testCase.id.padEnd(18)} ` +
-          `${String(result.elapsedMs).padStart(7)}ms ${result.outcome}\n`
+          `${String(result.elapsedMs).padStart(7)}ms ${result.outcome}\n`,
       )
     }
   }

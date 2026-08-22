@@ -1,4 +1,8 @@
-import { formatRis, type CitationMetadata, type CitationStyle } from "@/lib/citations"
+import {
+  formatRis,
+  type CitationMetadata,
+  type CitationStyle,
+} from "@/lib/citations"
 
 export interface CitationExportRecord {
   metadata: CitationMetadata
@@ -12,7 +16,7 @@ export function citationExportText(
   record: CitationExportRecord,
   style: CitationStyle,
   index: number,
-  startNumber = 1
+  startNumber = 1,
 ) {
   const raw = style === "bibtex" ? record.bibtex : record.citations[style]
   const number = index + startNumber
@@ -36,7 +40,7 @@ export function citationExportHtml(
   record: CitationExportRecord,
   style: CitationStyle,
   index: number,
-  startNumber = 1
+  startNumber = 1,
 ) {
   if (style === "bibtex" || !record.citationsHtml) {
     return undefined
@@ -48,14 +52,14 @@ export function citationExportHtml(
   if (style === "ieee") {
     return raw.replace(
       /<div class="csl-left-margin">\[\d+\]<\/div>/,
-      `<div class="csl-left-margin">[${number}]</div>`
+      `<div class="csl-left-margin">[${number}]</div>`,
     )
   }
 
   if (style === "vancouver") {
     return raw.replace(
       /<div class="csl-left-margin">\d+\.<\/div>/,
-      `<div class="csl-left-margin">${number}.</div>`
+      `<div class="csl-left-margin">${number}.</div>`,
     )
   }
 
@@ -65,20 +69,24 @@ export function citationExportHtml(
 export function formatCitationExport(
   records: CitationExportRecord[],
   style: CitationStyle,
-  startNumber = 1
+  startNumber = 1,
 ) {
   return records
-    .map((record, index) => citationExportText(record, style, index, startNumber))
+    .map((record, index) =>
+      citationExportText(record, style, index, startNumber),
+    )
     .join("\n\n")
 }
 
 export function formatCitationExportHtml(
   records: CitationExportRecord[],
   style: CitationStyle,
-  startNumber = 1
+  startNumber = 1,
 ) {
   return records
-    .map((record, index) => citationExportHtml(record, style, index, startNumber))
+    .map((record, index) =>
+      citationExportHtml(record, style, index, startNumber),
+    )
     .filter((html): html is string => Boolean(html))
     .join("\n")
 }

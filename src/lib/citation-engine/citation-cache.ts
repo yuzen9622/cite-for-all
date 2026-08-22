@@ -8,7 +8,7 @@ export class CitationCache<T> {
 
   constructor(
     private readonly ttlMs = 30 * 60 * 1_000,
-    private readonly maxEntries = 1_000
+    private readonly maxEntries = 1_000,
   ) {}
 
   get(key: string) {

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  formatRis,
-  type CitationMetadata,
-} from "@/lib/citations"
+import { formatRis, type CitationMetadata } from "@/lib/citations"
 
 describe("RIS export", () => {
   it("formats journal metadata with repeated authors and split pages", () => {
@@ -34,7 +31,7 @@ describe("RIS export", () => {
         "UR  - https://doi.org/10.1177/1745691615569000",
         "ER  - ",
         "",
-      ].join("\r\n")
+      ].join("\r\n"),
     )
   })
 

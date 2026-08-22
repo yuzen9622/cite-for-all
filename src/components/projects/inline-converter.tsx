@@ -16,10 +16,7 @@ interface InlineConverterProps {
   onSaved: (created: StoredReference[]) => void
 }
 
-export function InlineConverter({
-  projectId,
-  onSaved,
-}: InlineConverterProps) {
+export function InlineConverter({ projectId, onSaved }: InlineConverterProps) {
   const converter = useCitationConverter()
   const [saving, setSaving] = useState(false)
   const [savedSkips, setSavedSkips] = useState<
@@ -124,7 +121,8 @@ export function InlineConverter({
                       variant="outline"
                       className="rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
                     >
-                      ITEM {index + 1} · {result.data.inputType === "doi" ? "DOI" : "標題"}
+                      ITEM {index + 1} ·{" "}
+                      {result.data.inputType === "doi" ? "DOI" : "標題"}
                     </Badge>
                     <p className="break-words text-sm font-semibold">
                       {result.data.metadata.title}
@@ -144,7 +142,10 @@ export function InlineConverter({
             )}
 
             {converter.failedResults.length > 0 && (
-              <div className="space-y-1 text-sm text-muted-foreground" role="status">
+              <div
+                className="space-y-1 text-sm text-muted-foreground"
+                role="status"
+              >
                 {converter.failedResults.map((failure) => (
                   <p key={failure.order} className="break-words">
                     第 {failure.order} 筆：{failure.input} — {failure.message}
@@ -165,7 +166,10 @@ export function InlineConverter({
         )}
 
         {savedSkips.length > 0 && (
-          <div className="space-y-1 border-l-4 border-[#b84025] bg-[#fff6ef] px-4 py-3 text-sm text-muted-foreground" role="status">
+          <div
+            className="space-y-1 border-l-4 border-[#b84025] bg-[#fff6ef] px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+          >
             <p>以下文獻因 DOI 重複而略過：</p>
             <ul className="list-disc pl-5">
               {savedSkips.map((skipped) => (

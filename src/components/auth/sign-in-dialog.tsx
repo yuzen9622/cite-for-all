@@ -58,7 +58,7 @@ function hasMissingClientId(url: string | null) {
 export function SignInDialog() {
   const [open, setOpen] = useState(false)
   const [pendingProvider, setPendingProvider] = useState<AuthProvider | null>(
-    null
+    null,
   )
   const [error, setError] = useState("")
 
@@ -80,7 +80,12 @@ export function SignInDialog() {
         redirect: false,
       })
 
-      if (!result || !result.ok || result.error || hasMissingClientId(result.url)) {
+      if (
+        !result ||
+        !result.ok ||
+        result.error ||
+        hasMissingClientId(result.url)
+      ) {
         setError(signInErrorMessage(provider, result?.error))
         return
       }

@@ -32,7 +32,7 @@ export class CrossrefProvider implements MetadataProvider {
       this.name,
       `https://api.crossref.org/v1/works/${encodeURIComponent(doi)}`,
       { headers: crossrefHeaders() },
-      signal
+      signal,
     )
 
     if (payload === null) {
@@ -44,7 +44,7 @@ export class CrossrefProvider implements MetadataProvider {
       throw new ProviderError(
         this.name,
         "invalid-response",
-        "Crossref response did not contain a work"
+        "Crossref response did not contain a work",
       )
     }
 
@@ -71,7 +71,7 @@ export class CrossrefProvider implements MetadataProvider {
       this.name,
       `https://api.crossref.org/v1/works?${params}`,
       { headers: crossrefHeaders() },
-      signal
+      signal,
     )
     const message = messageFromPayload(payload)
     const items = message ? asRecordArray(message.items) : []

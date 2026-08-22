@@ -61,9 +61,7 @@ export function ReferenceBatchBar({
           type="button"
           size="sm"
           onClick={onMoveToTop}
-          disabled={
-            selectionActionDisabled || selectedCount === totalCount
-          }
+          disabled={selectionActionDisabled || selectedCount === totalCount}
           className="rounded-none"
         >
           移至頂部
@@ -72,9 +70,7 @@ export function ReferenceBatchBar({
           type="button"
           size="sm"
           onClick={onMoveToBottom}
-          disabled={
-            selectionActionDisabled || selectedCount === totalCount
-          }
+          disabled={selectionActionDisabled || selectedCount === totalCount}
           className="rounded-none"
         >
           移至底部

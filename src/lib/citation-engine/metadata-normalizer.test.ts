@@ -68,7 +68,7 @@ describe("metadata normalization", () => {
         license: [{ URL: "https://example.com/license" }],
       },
       "doi.org",
-      "10.1000/test"
+      "10.1000/test",
     )
 
     expect(result?.csl.issued).toEqual({ "date-parts": [[2016, 3]] })
@@ -120,7 +120,7 @@ describe("metadata normalization", () => {
         year: null,
         journal: "",
         doi: "https://doi.org/10.1000/NEW.",
-      } as unknown as CitationMetadata
+      } as unknown as CitationMetadata,
     )
 
     expect(result).not.toHaveProperty("author")
@@ -133,7 +133,11 @@ describe("metadata normalization", () => {
   it("never drops the required CSL type", () => {
     const result = applyMetadataToCsl(
       { id: "source-id", type: "article-journal", title: "Title" },
-      { title: "Title", authors: [], type: null } as unknown as CitationMetadata
+      {
+        title: "Title",
+        authors: [],
+        type: null,
+      } as unknown as CitationMetadata,
     )
 
     expect(result.type).toBe("article-journal")

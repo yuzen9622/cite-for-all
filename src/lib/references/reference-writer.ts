@@ -1,5 +1,8 @@
 import { randomBytes } from "node:crypto"
-import { formatBibtex, formatAllCitations } from "@/lib/citation-engine/citation-formatter"
+import {
+  formatBibtex,
+  formatAllCitations,
+} from "@/lib/citation-engine/citation-formatter"
 import { applyMetadataToCsl } from "@/lib/citation-engine/metadata-normalizer"
 import type { CslItem } from "@/lib/citation-engine/types"
 import type { CitationMetadata, CitationStyle } from "@/lib/citations"
@@ -13,13 +16,13 @@ type CitationSnapshot = {
 function referenceCuid() {
   return `c${Date.now().toString(36)}${randomBytes(16).toString("hex")}`.slice(
     0,
-    25
+    25,
   )
 }
 
 export function rebuildReferenceCitations(
   csl: CslItem,
-  metadata: CitationMetadata
+  metadata: CitationMetadata,
 ): CitationSnapshot {
   const nextCsl = applyMetadataToCsl(csl, metadata)
   const formatted = formatAllCitations(nextCsl)
@@ -38,6 +41,6 @@ export function cslFromMetadata(metadata: CitationMetadata): CslItem {
       type: "article-journal",
       title: metadata.title,
     },
-    metadata
+    metadata,
   )
 }

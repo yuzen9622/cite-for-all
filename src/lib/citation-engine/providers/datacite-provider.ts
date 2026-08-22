@@ -23,7 +23,7 @@ export class DataCiteProvider implements MetadataProvider {
       this.name,
       `https://api.datacite.org/dois/${encodeURIComponent(doi)}`,
       {},
-      signal
+      signal,
     )
 
     if (payload === null) {
@@ -35,13 +35,12 @@ export class DataCiteProvider implements MetadataProvider {
       throw new ProviderError(
         this.name,
         "invalid-response",
-        "DataCite response did not contain a work"
+        "DataCite response did not contain a work",
       )
     }
 
     const record = dataciteRecord(raw)
-    return record?.csl.DOI &&
-      normalizeDoi(record.csl.DOI) === normalizeDoi(doi)
+    return record?.csl.DOI && normalizeDoi(record.csl.DOI) === normalizeDoi(doi)
       ? record
       : null
   }
@@ -55,7 +54,7 @@ export class DataCiteProvider implements MetadataProvider {
       this.name,
       `https://api.datacite.org/dois?${params}`,
       {},
-      signal
+      signal,
     )
 
     return asRecordArray(dataFromPayload(payload)).flatMap((item) => {

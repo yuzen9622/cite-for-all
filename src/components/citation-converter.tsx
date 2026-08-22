@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import Link from "next/link";
+import Link from "next/link"
 import {
   ArrowRight,
   Check,
@@ -8,34 +8,34 @@ import {
   Download,
   FolderPlus,
   LoaderCircle,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useCitationConverter } from "@/hooks/use-citation-converter";
-import { sanitizeHtml } from "@/lib/sanitize-html";
-import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations";
-import { cn } from "@/lib/utils";
-import { SiteHeader } from "@/components/site-header";
+} from "@/components/ui/tooltip"
+import { useCitationConverter } from "@/hooks/use-citation-converter"
+import { sanitizeHtml } from "@/lib/sanitize-html"
+import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
+import { cn } from "@/lib/utils"
+import { SiteHeader } from "@/components/site-header"
 
 export function CitationConverter() {
-  const converter = useCitationConverter();
-  const failedCount = converter.failedResults.length;
+  const converter = useCitationConverter()
+  const failedCount = converter.failedResults.length
 
   return (
     <>
@@ -300,13 +300,13 @@ export function CitationConverter() {
                         result,
                         converter.style,
                         index,
-                      );
+                      )
                       const outputHtml = converter.citationHtmlAt(
                         result,
                         converter.style,
                         index,
-                      );
-                      const copyId = `item-${index}`;
+                      )
+                      const copyId = `item-${index}`
 
                       return (
                         <Card
@@ -393,7 +393,7 @@ export function CitationConverter() {
                             )}
                           </CardContent>
                         </Card>
-                      );
+                      )
                     })}
                   </div>
                 </>
@@ -431,5 +431,5 @@ export function CitationConverter() {
         </footer>
       </main>
     </>
-  );
+  )
 }

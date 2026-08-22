@@ -17,14 +17,14 @@ describe("POST /api/cite", () => {
       new Request("http://localhost/api/cite", {
         method: "POST",
         body: "{",
-      })
+      }),
     )
     const empty = await POST(
       new Request("http://localhost/api/cite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inputs: [] }),
-      })
+      }),
     )
 
     expect(malformed.status).toBe(400)
@@ -56,7 +56,7 @@ describe("POST /api/cite", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inputs: [" found ", "missing"] }),
-      })
+      }),
     )
 
     expect(response.status).toBe(200)
@@ -75,7 +75,7 @@ describe("POST /api/cite", () => {
     })
     expect(convertCitations).toHaveBeenCalledWith(
       ["found", "missing"],
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
     )
   })
 
@@ -88,14 +88,14 @@ describe("POST /api/cite", () => {
         body: JSON.stringify({
           inputs: Array.from({ length: 31 }, (_, index) => `title-${index}`),
         }),
-      })
+      }),
     )
     const tooLong = await POST(
       new Request("http://localhost/api/cite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inputs: ["x".repeat(501)] }),
-      })
+      }),
     )
 
     expect(tooMany.status).toBe(400)

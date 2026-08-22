@@ -9,18 +9,18 @@ import {
 describe("DOI input parsing", () => {
   it("canonicalizes DOI URLs and prefixes", () => {
     expect(normalizeDoi("https://doi.org/10.3102/0034654315581420")).toBe(
-      "10.3102/0034654315581420"
+      "10.3102/0034654315581420",
     )
     expect(normalizeDoi("DOI: 10.1109/TLT.2023.3259013")).toBe(
-      "10.1109/tlt.2023.3259013"
+      "10.1109/tlt.2023.3259013",
     )
   })
 
   it("extracts a DOI from a full reference without its trailing punctuation", () => {
     expect(
       extractDoi(
-        "Kulik, J. A. (2016). Review. https://doi.org/10.3102/0034654315581420."
-      )
+        "Kulik, J. A. (2016). Review. https://doi.org/10.3102/0034654315581420.",
+      ),
     ).toBe("10.3102/0034654315581420")
   })
 
@@ -39,22 +39,22 @@ describe("title input parsing", () => {
   it("extracts the title from an APA reference without a DOI", () => {
     expect(
       classifyInput(
-        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. *Perspectives on Psychological Science, 10*(2), 176–199."
-      )
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. *Perspectives on Psychological Science, 10*(2), 176–199.",
+      ),
     ).toEqual({ kind: "title", value: title })
 
     expect(
       classifyInput(
-        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. Perspectives on Psychological Science, 10(2), 176–199."
-      )
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review. Perspectives on Psychological Science, 10(2), 176–199.",
+      ),
     ).toEqual({ kind: "title", value: title })
   })
 
   it("extracts the title when an APA reference stops after the title", () => {
     expect(
       classifyInput(
-        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review."
-      )
+        "Soderstrom, N. C., & Bjork, R. A. (2015). Learning versus performance: An integrative review.",
+      ),
     ).toEqual({ kind: "title", value: title })
   })
 

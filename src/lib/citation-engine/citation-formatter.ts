@@ -17,7 +17,7 @@ const STYLE_FILES: Record<Exclude<CitationStyle, "bibtex">, string> = {
 }
 
 const REGISTERED_STYLE_NAMES = Object.fromEntries(
-  Object.keys(STYLE_FILES).map((style) => [style, `cite-for-all-${style}`])
+  Object.keys(STYLE_FILES).map((style) => [style, `cite-for-all-${style}`]),
 ) as Record<Exclude<CitationStyle, "bibtex">, string>
 
 let assetsRegistered = false
@@ -25,7 +25,7 @@ let assetsRegistered = false
 function readEngineAsset(...segments: string[]) {
   return readFileSync(
     path.join(process.cwd(), "src", "lib", "citation-engine", ...segments),
-    "utf8"
+    "utf8",
   )
 }
 
@@ -39,14 +39,11 @@ function registerAssets() {
   for (const [style, file] of Object.entries(STYLE_FILES)) {
     config.styles.add(
       REGISTERED_STYLE_NAMES[style as Exclude<CitationStyle, "bibtex">],
-      readEngineAsset("styles", file)
+      readEngineAsset("styles", file),
     )
   }
 
-  config.locales.add(
-    "en-US",
-    readEngineAsset("locales", "locales-en-US.xml")
-  )
+  config.locales.add("en-US", readEngineAsset("locales", "locales-en-US.xml"))
   assetsRegistered = true
 }
 
@@ -81,7 +78,10 @@ function shouldSentenceCaseTitle(type: string | undefined) {
  * IEEE 的文章標題需 sentence case（metadata 供應商常回傳 Title Case），
  * 其餘樣式不處理。text 與 html 兩種輸出共用同一轉換。
  */
-function prepareIeeeItem(item: CslItem, style: Exclude<CitationStyle, "bibtex">) {
+function prepareIeeeItem(
+  item: CslItem,
+  style: Exclude<CitationStyle, "bibtex">,
+) {
   return style === "ieee" && item.title && shouldSentenceCaseTitle(item.type)
     ? { ...item, title: sentenceCaseTitle(item.title) }
     : item
@@ -89,7 +89,7 @@ function prepareIeeeItem(item: CslItem, style: Exclude<CitationStyle, "bibtex">)
 
 export function formatBibliography(
   item: CslItem,
-  style: Exclude<CitationStyle, "bibtex">
+  style: Exclude<CitationStyle, "bibtex">,
 ) {
   registerAssets()
   const citation = new Cite([prepareIeeeItem(item, style)])
@@ -100,7 +100,7 @@ export function formatBibliography(
         format: "text",
         template: REGISTERED_STYLE_NAMES[style],
         lang: "en-US",
-      })
+      }),
     )
   } catch (error) {
     throw new Error(`Unable to format ${style} citation`, { cause: error })
@@ -120,7 +120,7 @@ function extractEntryHtml(html: string) {
  */
 export function formatBibliographyHtml(
   item: CslItem,
-  style: Exclude<CitationStyle, "bibtex">
+  style: Exclude<CitationStyle, "bibtex">,
 ) {
   registerAssets()
   const citation = new Cite([prepareIeeeItem(item, style)])
@@ -132,8 +132,8 @@ export function formatBibliographyHtml(
           format: "html",
           template: REGISTERED_STYLE_NAMES[style],
           lang: "en-US",
-        })
-      )
+        }),
+      ),
     )
   } catch (error) {
     throw new Error(`Unable to format ${style} citation`, { cause: error })
@@ -147,15 +147,9 @@ export function formatBibtex(item: CslItem) {
 }
 
 export function formatAllCitations(item: CslItem) {
-  const styles = Object.keys(STYLE_FILES) as Exclude<
-    CitationStyle,
-    "bibtex"
-  >[]
+  const styles = Object.keys(STYLE_FILES) as Exclude<CitationStyle, "bibtex">[]
   const citations = {} as Record<Exclude<CitationStyle, "bibtex">, string>
-  const citationsHtml = {} as Record<
-    Exclude<CitationStyle, "bibtex">,
-    string
-  >
+  const citationsHtml = {} as Record<Exclude<CitationStyle, "bibtex">, string>
 
   for (const style of styles) {
     citations[style] = formatBibliography(item, style)

@@ -104,7 +104,10 @@
       ),
       linear-gradient(rgb(20 36 31 / 4%) 1px, transparent 1px),
       var(--background);
-    background-size: auto, 100% 40px, auto;
+    background-size:
+      auto,
+      100% 40px,
+      auto;
   }
 }
 
