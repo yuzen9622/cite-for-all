@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { ExternalLink } from "lucide-react"
-import { signOut, useSession } from "next-auth/react"
-import Link from "next/link"
-import { SignInDialog } from "@/components/auth/sign-in-dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { ExternalLink } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
+import { SignInDialog } from "@/components/auth/sign-in-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
-  const { data: session } = useSession()
-  const user = session?.user
+  const { data: session } = useSession();
+  const user = session?.user;
 
   return (
     <div className="mx-auto w-full max-w-[1480px] px-3 sm:px-7">
@@ -30,7 +30,7 @@ export function SiteHeader() {
             rel="noreferrer"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "text-muted-foreground"
+              "text-muted-foreground",
             )}
           >
             <span className="size-2 rounded-full bg-[#5d9a56] shadow-[0_0_0_5px_rgb(93_154_86/0.12)]" />
@@ -44,7 +44,7 @@ export function SiteHeader() {
           {user ? (
             <div className="flex items-center gap-2">
               <Link
-                href="/projects"
+                href="/"
                 aria-label="前往我的專案"
                 title="我的專案"
                 className="shrink-0 rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
@@ -58,15 +58,23 @@ export function SiteHeader() {
                   />
                 ) : (
                   <span className="grid size-8 place-items-center rounded-full border border-border bg-secondary text-xs font-bold transition-colors hover:border-accent">
-                    {(user.name ?? user.email ?? "使").slice(0, 1).toUpperCase()}
+                    {(user.name ?? user.email ?? "使")
+                      .slice(0, 1)
+                      .toUpperCase()}
                   </span>
                 )}
               </Link>
               <Link
-                href="/projects"
+                href="/"
                 className="hidden text-sm font-semibold hover:text-accent sm:inline"
               >
                 我的專案
+              </Link>
+              <Link
+                href="/convert"
+                className="hidden text-sm font-semibold hover:text-accent sm:inline"
+              >
+                快速轉換
               </Link>
               <Button
                 type="button"
@@ -84,5 +92,5 @@ export function SiteHeader() {
         </div>
       </header>
     </div>
-  )
+  );
 }

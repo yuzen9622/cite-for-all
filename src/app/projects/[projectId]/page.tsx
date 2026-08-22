@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -13,15 +13,15 @@ import {
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
-} from "@dnd-kit/core"
+} from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
   Check,
@@ -30,10 +30,10 @@ import {
   GripVertical,
   Pencil,
   Trash2,
-} from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogBackdrop,
@@ -43,49 +43,52 @@ import {
   DialogPortal,
   DialogTitle,
   DialogViewport,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { InlineConverter } from "@/components/projects/inline-converter"
-import { ReferenceBatchBar } from "@/components/projects/reference-batch-bar"
-import { ReferenceEditor, type EditableReference } from "@/components/projects/reference-editor"
-import { SiteHeader } from "@/components/site-header"
-import { cn } from "@/lib/utils"
-import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { InlineConverter } from "@/components/projects/inline-converter";
+import { ReferenceBatchBar } from "@/components/projects/reference-batch-bar";
+import {
+  ReferenceEditor,
+  type EditableReference,
+} from "@/components/projects/reference-editor";
+import { SiteHeader } from "@/components/site-header";
+import { cn } from "@/lib/utils";
+import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations";
 import {
   citationExportText,
   formatCitationExport,
   formatRisExport,
   type CitationExportRecord,
-} from "@/lib/export-citations"
+} from "@/lib/export-citations";
 
 export interface StoredReference extends EditableReference {
-  projectId: string
-  sortOrder: number
-  input: string
-  inputType: string
-  provider: string | null
-  itemType: string | null
-  citations: Record<string, string>
-  bibtex: string
-  isEdited: boolean
+  projectId: string;
+  sortOrder: number;
+  input: string;
+  inputType: string;
+  provider: string | null;
+  itemType: string | null;
+  citations: Record<string, string>;
+  bibtex: string;
+  isEdited: boolean;
 }
 
 export interface ProjectData {
-  id: string
-  name: string
-  description: string | null
-  defaultStyle: string
-  references: StoredReference[]
+  id: string;
+  name: string;
+  description: string | null;
+  defaultStyle: string;
+  references: StoredReference[];
 }
 
 function downloadTextFile(content: string, filename: string, type: string) {
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function exportRecord(reference: StoredReference): CitationExportRecord {
@@ -105,28 +108,28 @@ function exportRecord(reference: StoredReference): CitationExportRecord {
     },
     citations: reference.citations as CitationExportRecord["citations"],
     bibtex: reference.bibtex,
-  }
+  };
 }
 
 interface SortableReferenceProps {
-  reference: StoredReference
-  index: number
-  startNumber: number
-  style: CitationStyle
-  projectId: string
-  isEditing: boolean
-  dragDisabled: boolean
-  actionsDisabled: boolean
-  selected: boolean
-  selectionDisabled: boolean
-  dragGroupIds: Set<string>
-  activeDragId: string | null
-  dragOffset: { x: number; y: number }
-  onToggleSelected: () => void
-  onEdit: () => void
-  onDelete: () => void
-  onSaved: (reference: EditableReference) => void
-  onCancel: () => void
+  reference: StoredReference;
+  index: number;
+  startNumber: number;
+  style: CitationStyle;
+  projectId: string;
+  isEditing: boolean;
+  dragDisabled: boolean;
+  actionsDisabled: boolean;
+  selected: boolean;
+  selectionDisabled: boolean;
+  dragGroupIds: Set<string>;
+  activeDragId: string | null;
+  dragOffset: { x: number; y: number };
+  onToggleSelected: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onSaved: (reference: EditableReference) => void;
+  onCancel: () => void;
 }
 
 function SortableReference({
@@ -156,12 +159,12 @@ function SortableReference({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: reference.id, disabled: dragDisabled })
-  const isGrouped = dragGroupIds.has(reference.id)
-  const isFollower = isGrouped && activeDragId !== reference.id
+  } = useSortable({ id: reference.id, disabled: dragDisabled });
+  const isGrouped = dragGroupIds.has(reference.id);
+  const isFollower = isGrouped && activeDragId !== reference.id;
   const displayTransform = isFollower
     ? `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0)`
-    : CSS.Transform.toString(transform)
+    : CSS.Transform.toString(transform);
 
   return (
     <div
@@ -169,14 +172,14 @@ function SortableReference({
       style={{ transform: displayTransform, transition }}
       className={cn(
         isDragging && "relative z-10 opacity-70",
-        isFollower && "relative z-10 opacity-70"
+        isFollower && "relative z-10 opacity-70",
       )}
     >
       <Card
         className={cn(
           "rounded-none transition-shadow",
           isDragging && "shadow-lg ring-2 ring-accent",
-          selected && "ring-2 ring-accent bg-secondary/20"
+          selected && "ring-2 ring-accent bg-secondary/20",
         )}
       >
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -202,11 +205,16 @@ function SortableReference({
             </button>
             <div className="min-w-0">
               <p className="mb-1 font-mono text-[11px] font-bold text-[#b84025]">
-                項目 {String(index + startNumber).padStart(2, "0")} · {reference.inputType === "doi" ? "DOI" : "標題"}
+                項目 {String(index + startNumber).padStart(2, "0")} ·{" "}
+                {reference.inputType === "doi" ? "DOI" : "標題"}
               </p>
-              <CardTitle className="break-words text-lg">{reference.title}</CardTitle>
+              <CardTitle className="break-words text-lg">
+                {reference.title}
+              </CardTitle>
               <p className="mt-1 break-words text-xs text-muted-foreground">
-                {[reference.year, reference.journal, reference.doi].filter(Boolean).join(" · ")}
+                {[reference.year, reference.journal, reference.doi]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
           </div>
@@ -243,191 +251,203 @@ function SortableReference({
             />
           ) : (
             <pre className="overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
-              {citationExportText(exportRecord(reference), style, index, startNumber)}
+              {citationExportText(
+                exportRecord(reference),
+                style,
+                index,
+                startNumber,
+              )}
             </pre>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export default function ProjectDetailPage() {
-  const params = useParams<{ projectId: string }>()
-  const projectId = params.projectId
-  const [project, setProject] = useState<ProjectData | null>(null)
-  const [style, setStyle] = useState<CitationStyle>("apa")
-  const [startNumber, setStartNumber] = useState(1)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [requiresLogin, setRequiresLogin] = useState(false)
-  const [reorderPending, setReorderPending] = useState(false)
-  const [reorderStatus, setReorderStatus] = useState("")
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const params = useParams<{ projectId: string }>();
+  const projectId = params.projectId;
+  const [project, setProject] = useState<ProjectData | null>(null);
+  const [style, setStyle] = useState<CitationStyle>("apa");
+  const [startNumber, setStartNumber] = useState(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [requiresLogin, setRequiresLogin] = useState(false);
+  const [reorderPending, setReorderPending] = useState(false);
+  const [reorderStatus, setReorderStatus] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{
-    ids: string[]
-    count: number
-  } | null>(null)
-  const [bulkDeleting, setBulkDeleting] = useState(false)
-  const [activeDragId, setActiveDragId] = useState<string | null>(null)
-  const [dragGroup, setDragGroup] = useState<Set<string>>(new Set())
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+    ids: string[];
+    count: number;
+  } | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [dragGroup, setDragGroup] = useState<Set<string>>(new Set());
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const loadProject = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
         headers: { "Cache-Control": "no-cache" },
-      })
+      });
       const payload = (await response.json()) as {
-        project?: ProjectData
-        error?: string
-      }
+        project?: ProjectData;
+        error?: string;
+      };
       if (response.status === 401) {
-        setRequiresLogin(true)
+        setRequiresLogin(true);
       }
       if (!response.ok || !payload.project) {
-        setError(payload.error || "無法載入專案。")
-        return
+        setError(payload.error || "無法載入專案。");
+        return;
       }
-      setProject(payload.project)
+      setProject(payload.project);
       setStyle(
-        STYLE_OPTIONS.some((option) => option.id === payload.project?.defaultStyle)
+        STYLE_OPTIONS.some(
+          (option) => option.id === payload.project?.defaultStyle,
+        )
           ? (payload.project.defaultStyle as CitationStyle)
-          : "apa"
-      )
+          : "apa",
+      );
     } catch {
-      setError("無法連線到專案服務，請稍後再試。")
+      setError("無法連線到專案服務，請稍後再試。");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [projectId])
+  }, [projectId]);
 
   useEffect(() => {
     // This effect synchronizes the page with the remote project record.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadProject()
-  }, [loadProject])
+    void loadProject();
+  }, [loadProject]);
 
-  const selectedCount = selectedIds.size
+  const selectedCount = selectedIds.size;
   const allSelected =
     project !== null &&
     project.references.length > 0 &&
-    selectedCount === project.references.length
+    selectedCount === project.references.length;
   const selectedReferences = useMemo(
     () =>
-      project?.references.filter((reference) => selectedIds.has(reference.id)) ??
-      [],
-    [project, selectedIds]
-  )
+      project?.references.filter((reference) =>
+        selectedIds.has(reference.id),
+      ) ?? [],
+    [project, selectedIds],
+  );
   const selectionDisabled =
-    reorderPending || editingId !== null || bulkDeleting
+    reorderPending || editingId !== null || bulkDeleting;
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {
-      const next = new Set(current)
+      const next = new Set(current);
       if (next.has(id)) {
-        next.delete(id)
+        next.delete(id);
       } else {
-        next.add(id)
+        next.add(id);
       }
-      return next
-    })
+      return next;
+    });
   }
 
   function toggleSelectAll() {
     if (!project) {
-      return
+      return;
     }
 
     setSelectedIds(
-      allSelected ? new Set() : new Set(project.references.map((reference) => reference.id))
-    )
+      allSelected
+        ? new Set()
+        : new Set(project.references.map((reference) => reference.id)),
+    );
   }
 
   const records = useMemo(
     () => project?.references.map(exportRecord) ?? [],
-    [project?.references]
-  )
+    [project?.references],
+  );
   const allText = useMemo(
     () => formatCitationExport(records, style, startNumber),
-    [records, startNumber, style]
-  )
+    [records, startNumber, style],
+  );
 
   async function copyAll() {
     try {
-      await navigator.clipboard.writeText(allText)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1800)
-      toast.success(`已複製 ${records.length} 筆引用。`)
+      await navigator.clipboard.writeText(allText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+      toast.success(`已複製 ${records.length} 筆引用。`);
     } catch {
-      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。");
     }
   }
 
   function downloadAll() {
-    const filename = `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`
+    const filename = `${project?.name ?? "project"}-${style}.${style === "bibtex" ? "bib" : "txt"}`;
     try {
-      downloadTextFile(allText, filename, "text/plain;charset=utf-8")
-      toast.success(`已下載 ${filename}。`)
+      downloadTextFile(allText, filename, "text/plain;charset=utf-8");
+      toast.success(`已下載 ${filename}。`);
     } catch {
-      toast.error("下載失敗，請稍後再試。")
+      toast.error("下載失敗，請稍後再試。");
     }
   }
 
   function downloadRis() {
-    const filename = `${project?.name ?? "project"}.ris`
+    const filename = `${project?.name ?? "project"}.ris`;
     try {
       downloadTextFile(
         formatRisExport(records),
         filename,
-        "application/x-research-info-systems;charset=utf-8"
-      )
-      toast.success(`已下載 ${filename}。`)
+        "application/x-research-info-systems;charset=utf-8",
+      );
+      toast.success(`已下載 ${filename}。`);
     } catch {
-      toast.error("下載失敗，請稍後再試。")
+      toast.error("下載失敗，請稍後再試。");
     }
   }
 
   async function deleteReference(reference: StoredReference) {
     if (!window.confirm(`確定要刪除「${reference.title}」嗎？`)) {
-      return
+      return;
     }
 
     try {
       const response = await fetch(
         `/api/projects/${projectId}/references/${reference.id}`,
-        { method: "DELETE" }
-      )
-      const payload = (await response.json()) as { error?: string }
+        { method: "DELETE" },
+      );
+      const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
-        toast.error(payload.error || "刪除文獻失敗。")
-        return
+        toast.error(payload.error || "刪除文獻失敗。");
+        return;
       }
       setProject((current) =>
         current
           ? {
               ...current,
               references: current.references.filter(
-                (item) => item.id !== reference.id
+                (item) => item.id !== reference.id,
               ),
             }
-          : current
-      )
+          : current,
+      );
       setSelectedIds((current) => {
-        const next = new Set(current)
-        next.delete(reference.id)
-        return next
-      })
-      toast.success(`已刪除「${reference.title}」。`)
+        const next = new Set(current);
+        next.delete(reference.id);
+        return next;
+      });
+      toast.success(`已刪除「${reference.title}」。`);
     } catch {
-      toast.error("無法連線到文獻服務，請稍後再試。")
+      toast.error("無法連線到文獻服務，請稍後再試。");
     }
   }
 
@@ -437,22 +457,20 @@ export default function ProjectDetailPage() {
         ? {
             ...current,
             references: current.references.map((item) =>
-              item.id === reference.id
-                ? { ...item, ...reference }
-                : item
+              item.id === reference.id ? { ...item, ...reference } : item,
             ),
           }
-        : current
-    )
-    setEditingId(null)
+        : current,
+    );
+    setEditingId(null);
   }
 
   function handleConverterSaved(created: StoredReference[]) {
     setProject((current) =>
       current
         ? { ...current, references: [...current.references, ...created] }
-        : current
-    )
+        : current,
+    );
   }
 
   function moveSelected(direction: "top" | "bottom") {
@@ -461,21 +479,21 @@ export default function ProjectDetailPage() {
       selectedIds.size === 0 ||
       selectedIds.size === project.references.length
     ) {
-      return
+      return;
     }
 
     const selectedRows = project.references.filter((reference) =>
-      selectedIds.has(reference.id)
-    )
+      selectedIds.has(reference.id),
+    );
     const rest = project.references.filter(
-      (reference) => !selectedIds.has(reference.id)
-    )
+      (reference) => !selectedIds.has(reference.id),
+    );
     const nextReferences =
       direction === "top"
         ? [...selectedRows, ...rest]
-        : [...rest, ...selectedRows]
+        : [...rest, ...selectedRows];
 
-    void saveOrder(nextReferences.map((reference) => reference.id))
+    void saveOrder(nextReferences.map((reference) => reference.id));
   }
 
   async function copySelected() {
@@ -484,68 +502,68 @@ export default function ProjectDetailPage() {
         formatCitationExport(
           selectedReferences.map(exportRecord),
           style,
-          startNumber
-        )
-      )
-      toast.success(`已複製 ${selectedReferences.length} 筆引用。`)
+          startNumber,
+        ),
+      );
+      toast.success(`已複製 ${selectedReferences.length} 筆引用。`);
     } catch {
-      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
+      toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。");
     }
   }
 
   function downloadSelected() {
-    const filename = `${project?.name ?? "project"}-selected-${style}.${style === "bibtex" ? "bib" : "txt"}`
+    const filename = `${project?.name ?? "project"}-selected-${style}.${style === "bibtex" ? "bib" : "txt"}`;
     try {
       downloadTextFile(
         formatCitationExport(
           selectedReferences.map(exportRecord),
           style,
-          startNumber
+          startNumber,
         ),
         filename,
-        "text/plain;charset=utf-8"
-      )
-      toast.success(`已下載 ${filename}。`)
+        "text/plain;charset=utf-8",
+      );
+      toast.success(`已下載 ${filename}。`);
     } catch {
-      toast.error("下載失敗，請稍後再試。")
+      toast.error("下載失敗，請稍後再試。");
     }
   }
 
   function downloadSelectedRis() {
-    const filename = `${project?.name ?? "project"}-selected.ris`
+    const filename = `${project?.name ?? "project"}-selected.ris`;
     try {
       downloadTextFile(
         formatRisExport(selectedReferences.map(exportRecord)),
         filename,
-        "application/x-research-info-systems;charset=utf-8"
-      )
-      toast.success(`已下載 ${filename}。`)
+        "application/x-research-info-systems;charset=utf-8",
+      );
+      toast.success(`已下載 ${filename}。`);
     } catch {
-      toast.error("下載失敗，請稍後再試。")
+      toast.error("下載失敗，請稍後再試。");
     }
   }
 
   async function confirmBulkDelete() {
-    const target = deleteTarget
+    const target = deleteTarget;
     if (!target) {
-      return
+      return;
     }
 
-    setBulkDeleting(true)
+    setBulkDeleting(true);
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referenceIds: target.ids }),
-      })
+      });
       const payload = (await response.json()) as {
-        deleted?: number
-        error?: string
-      }
+        deleted?: number;
+        error?: string;
+      };
 
       if (!response.ok) {
-        toast.error(payload.error || "刪除文獻失敗。")
-        return
+        toast.error(payload.error || "刪除文獻失敗。");
+        return;
       }
 
       setProject((current) =>
@@ -553,175 +571,174 @@ export default function ProjectDetailPage() {
           ? {
               ...current,
               references: current.references.filter(
-                (reference) => !selectedIds.has(reference.id)
+                (reference) => !selectedIds.has(reference.id),
               ),
             }
-          : current
-      )
-      setSelectedIds(new Set())
-      setDeleteTarget(null)
-      toast.success(`已刪除 ${payload.deleted ?? target.count} 筆文獻。`)
+          : current,
+      );
+      setSelectedIds(new Set());
+      setDeleteTarget(null);
+      toast.success(`已刪除 ${payload.deleted ?? target.count} 筆文獻。`);
     } catch {
-      toast.error("無法連線到文獻服務，請稍後再試。")
+      toast.error("無法連線到文獻服務，請稍後再試。");
     } finally {
-      setBulkDeleting(false)
+      setBulkDeleting(false);
     }
   }
 
   async function saveOrder(ids: string[]) {
     if (!project || reorderPending || editingId) {
-      return
+      return;
     }
 
-    const previousReferences = project.references
-    const previousIds = new Set(previousReferences.map((r) => r.id))
+    const previousReferences = project.references;
+    const previousIds = new Set(previousReferences.map((r) => r.id));
     const nextReferences = ids.map((id, index) => ({
       ...previousReferences.find((reference) => reference.id === id)!,
       sortOrder: index + 1,
-    }))
+    }));
 
     // 排序請求期間可能有內嵌轉換器並行新增文獻；套用/回滾時都要保留
     // 不在排序清單中的新項目，避免被舊快照覆蓋造成前後端不同步。
     const applySorted = (current: ProjectData | null) => {
       if (!current) {
-        return current
+        return current;
       }
       const additions = current.references.filter(
-        (reference) => !previousIds.has(reference.id)
-      )
+        (reference) => !previousIds.has(reference.id),
+      );
       return additions.length
         ? { ...current, references: [...nextReferences, ...additions] }
-        : { ...current, references: nextReferences }
-    }
+        : { ...current, references: nextReferences };
+    };
     const rollbackSorted = (current: ProjectData | null) => {
       if (!current) {
-        return current
+        return current;
       }
       const additions = current.references.filter(
-        (reference) => !previousIds.has(reference.id)
-      )
+        (reference) => !previousIds.has(reference.id),
+      );
       return additions.length
         ? { ...current, references: [...previousReferences, ...additions] }
-        : { ...current, references: previousReferences }
-    }
+        : { ...current, references: previousReferences };
+    };
 
-    setProject(applySorted)
-    setReorderPending(true)
-    setReorderStatus("正在儲存新排序…")
+    setProject(applySorted);
+    setReorderPending(true);
+    setReorderStatus("正在儲存新排序…");
 
     try {
       const response = await fetch(`/api/projects/${projectId}/references`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referenceIds: ids }),
-      })
-      const payload = (await response.json()) as { error?: string }
+      });
+      const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error || "儲存文獻排序失敗。")
+        throw new Error(payload.error || "儲存文獻排序失敗。");
       }
 
-      toast.success("已儲存新的文獻排序。")
+      toast.success("已儲存新的文獻排序。");
     } catch (reorderError) {
-      setProject(rollbackSorted)
+      setProject(rollbackSorted);
       toast.error(
         reorderError instanceof Error
           ? reorderError.message
-          : "無法連線到文獻服務，請稍後再試。"
-      )
+          : "無法連線到文獻服務，請稍後再試。",
+      );
     } finally {
       // The outcome is announced by the toast; this line only reports progress.
-      setReorderStatus("")
-      setReorderPending(false)
+      setReorderStatus("");
+      setReorderPending(false);
     }
   }
 
   function reorderReferences(activeId: string, overId: string) {
     if (!project || activeId === overId || reorderPending || editingId) {
-      return
+      return;
     }
 
-    const oldIndex = project.references.findIndex((item) => item.id === activeId)
-    const newIndex = project.references.findIndex((item) => item.id === overId)
+    const oldIndex = project.references.findIndex(
+      (item) => item.id === activeId,
+    );
+    const newIndex = project.references.findIndex((item) => item.id === overId);
     if (oldIndex < 0 || newIndex < 0) {
-      return
+      return;
     }
 
     const nextIds = arrayMove(project.references, oldIndex, newIndex).map(
-      (reference) => reference.id
-    )
-    void saveOrder(nextIds)
+      (reference) => reference.id,
+    );
+    void saveOrder(nextIds);
   }
 
   function handleDragStart(event: DragStartEvent) {
-    const activeId = String(event.active.id)
-    setActiveDragId(activeId)
+    const activeId = String(event.active.id);
+    setActiveDragId(activeId);
     if (project && selectedIds.has(activeId) && selectedIds.size > 1) {
       const group = project.references
         .filter((reference) => selectedIds.has(reference.id))
-        .map((reference) => reference.id)
-      setDragGroup(new Set(group))
+        .map((reference) => reference.id);
+      setDragGroup(new Set(group));
     } else {
-      setDragGroup(new Set([activeId]))
+      setDragGroup(new Set([activeId]));
     }
   }
 
   function handleDragMove(event: DragMoveEvent) {
-    setDragOffset({ x: event.delta.x, y: event.delta.y })
+    setDragOffset({ x: event.delta.x, y: event.delta.y });
   }
 
   function resetDragState() {
-    setActiveDragId(null)
-    setDragGroup(new Set())
-    setDragOffset({ x: 0, y: 0 })
+    setActiveDragId(null);
+    setDragGroup(new Set());
+    setDragOffset({ x: 0, y: 0 });
   }
 
   function handleDragEnd(event: DragEndEvent) {
     if (!event.over) {
-      resetDragState()
-      return
+      resetDragState();
+      return;
     }
 
-    const activeId = String(event.active.id)
-    const overId = String(event.over.id)
+    const activeId = String(event.active.id);
+    const overId = String(event.over.id);
     if (!project || reorderPending || editingId) {
-      resetDragState()
-      return
+      resetDragState();
+      return;
     }
 
     if (dragGroup.size > 1 && dragGroup.has(activeId)) {
       if (dragGroup.has(overId)) {
         // 目標在群組內部：群組保持相對順序，不移動
-        resetDragState()
-        return
+        resetDragState();
+        return;
       }
-      const ids = project.references.map((reference) => reference.id)
-      const groupIds = ids.filter((id) => dragGroup.has(id))
-      const offsetInGroup = groupIds.indexOf(activeId)
-      const overIndex = ids.indexOf(overId)
+      const ids = project.references.map((reference) => reference.id);
+      const groupIds = ids.filter((id) => dragGroup.has(id));
+      const offsetInGroup = groupIds.indexOf(activeId);
+      const overIndex = ids.indexOf(overId);
       // 以 active 為錨點：active 應落到 over 的位置，群組其他成員
       // 保持與 active 的相對順序一起平移，並 clamp 到陣列邊界。
       const newGroupStart = Math.max(
         0,
-        Math.min(
-          overIndex - offsetInGroup,
-          ids.length - groupIds.length
-        )
-      )
+        Math.min(overIndex - offsetInGroup, ids.length - groupIds.length),
+      );
 
       if (newGroupStart !== ids.indexOf(groupIds[0])) {
-        const rest = ids.filter((id) => !dragGroup.has(id))
+        const rest = ids.filter((id) => !dragGroup.has(id));
         const nextIds = [
           ...rest.slice(0, newGroupStart),
           ...groupIds,
           ...rest.slice(newGroupStart),
-        ]
-        void saveOrder(nextIds)
+        ];
+        void saveOrder(nextIds);
       }
     } else {
-      void reorderReferences(activeId, overId)
+      void reorderReferences(activeId, overId);
     }
-    resetDragState()
+    resetDragState();
   }
 
   if (loading) {
@@ -732,7 +749,7 @@ export default function ProjectDetailPage() {
           正在載入專案…
         </main>
       </>
-    )
+    );
   }
 
   if (requiresLogin) {
@@ -740,23 +757,23 @@ export default function ProjectDetailPage() {
       <>
         <SiteHeader />
         <main className="mx-auto max-w-5xl px-4 py-12">
-        <Card className="rounded-none">
-          <CardContent className="space-y-4 p-6">
-            <p className="text-sm">請先登入，才能查看此專案。</p>
-            <Button
-              type="button"
-              onClick={() => {
-                window.location.href = `/api/auth/signin?callbackUrl=/projects/${projectId}`
-              }}
-              className="rounded-none"
-            >
-              前往登入
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="rounded-none">
+            <CardContent className="space-y-4 p-6">
+              <p className="text-sm">請先登入，才能查看此專案。</p>
+              <Button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/api/auth/signin?callbackUrl=/projects/${projectId}`;
+                }}
+                className="rounded-none"
+              >
+                前往登入
+              </Button>
+            </CardContent>
+          </Card>
         </main>
       </>
-    )
+    );
   }
 
   if (!project) {
@@ -764,189 +781,211 @@ export default function ProjectDetailPage() {
       <>
         <SiteHeader />
         <main className="mx-auto max-w-5xl px-4 py-12">
-        <p className="text-sm text-destructive" role="alert">
-          {error || "找不到此專案。"}
-        </p>
-        <Link href="/projects" className="mt-4 inline-flex text-sm underline">
-          回到專案列表
-        </Link>
+          <p className="text-sm text-destructive" role="alert">
+            {error || "找不到此專案。"}
+          </p>
+          <Link href="/" className="mt-4 inline-flex text-sm underline">
+            回到專案列表
+          </Link>
         </main>
       </>
-    )
+    );
   }
 
   return (
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-7 sm:py-12">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <Link
-            href="/projects"
-            className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> 我的專案
-          </Link>
-          <h1 className="font-heading text-4xl font-semibold tracking-[-0.05em]">
-            {project.name}
-          </h1>
-          {project.description && (
-            <p className="mt-2 text-sm text-muted-foreground">{project.description}</p>
-          )}
-        </div>
-        <span className="text-sm text-muted-foreground">
-          {project.references.length} 筆文獻
-        </span>
-      </div>
-
-      {error && (
-        <p className="mb-5 text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      )}
-
-      <Card className="mb-6 rounded-none border-foreground/30">
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-xl">引用格式與匯出</CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={style}
-              onChange={(event) => setStyle(event.target.value as CitationStyle)}
-              className="h-9 rounded-none border border-input bg-background px-3 text-sm"
-              aria-label="選擇引用格式"
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <Link
+              href="/"
+              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
-              {STYLE_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Button type="button" variant="outline" size="sm" onClick={() => void copyAll()} className="rounded-none">
-              {copied ? <Check /> : <Copy />} {copied ? "已複製" : "複製全部"}
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={downloadAll} className="rounded-none">
-              <Download /> 下載
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={downloadRis} className="rounded-none">
-              <Download /> RIS
-            </Button>
+              <ArrowLeft className="size-4" /> 我的專案
+            </Link>
+            <h1 className="font-heading text-4xl font-semibold tracking-[-0.05em]">
+              {project.name}
+            </h1>
+            {project.description && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {project.description}
+              </p>
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
-          {(style === "ieee" || style === "vancouver") && (
-            <div className="mb-4 flex items-center gap-3 text-sm">
-              <label htmlFor="project-start-number">起始編號</label>
-              <Input
-                id="project-start-number"
-                type="number"
-                min={1}
-                max={9999}
-                value={startNumber}
-                onChange={(event) => {
-                  const value = Number.parseInt(event.target.value, 10)
-                  if (Number.isInteger(value) && value > 0) {
-                    setStartNumber(Math.min(value, 9999))
-                  }
-                }}
-                className="h-9 w-24 rounded-none"
-              />
-            </div>
-          )}
-          <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
-            {allText || "目前沒有可匯出的文獻。"}
-          </pre>
-        </CardContent>
-      </Card>
-
-      <InlineConverter projectId={projectId} onSaved={handleConverterSaved} />
-
-      {project.references.length > 0 && (
-        <ReferenceBatchBar
-          totalCount={project.references.length}
-          selectedCount={selectedCount}
-          allSelected={allSelected}
-          disabled={selectionDisabled}
-          busy={bulkDeleting}
-          onSelectAll={toggleSelectAll}
-          onClear={() => setSelectedIds(new Set())}
-          onMoveToTop={() => moveSelected("top")}
-          onMoveToBottom={() => moveSelected("bottom")}
-          onDelete={() =>
-            setDeleteTarget({
-              ids: Array.from(selectedIds),
-              count: selectedCount,
-            })
-          }
-          onCopy={() => void copySelected()}
-          onDownload={downloadSelected}
-          onDownloadRis={downloadSelectedRis}
-        />
-      )}
-
-      {project.references.length > 1 && (
-        <div className="mb-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>拖曳每筆文獻左側的把手即可調整引用與匯出順序。</p>
-          <p className="shrink-0" aria-live="polite">
-            {reorderStatus}
-          </p>
+          <span className="text-sm text-muted-foreground">
+            {project.references.length} 筆文獻
+          </span>
         </div>
-      )}
 
-      {project.references.length === 0 ? (
+        {error && (
+          <p className="mb-5 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
+
+        <Card className="mb-6 rounded-none border-foreground/30">
+          <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-xl">引用格式與匯出</CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={style}
+                onChange={(event) =>
+                  setStyle(event.target.value as CitationStyle)
+                }
+                className="h-9 rounded-none border border-input bg-background px-3 text-sm"
+                aria-label="選擇引用格式"
+              >
+                {STYLE_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void copyAll()}
+                className="rounded-none"
+              >
+                {copied ? <Check /> : <Copy />} {copied ? "已複製" : "複製全部"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={downloadAll}
+                className="rounded-none"
+              >
+                <Download /> 下載
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={downloadRis}
+                className="rounded-none"
+              >
+                <Download /> RIS
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(style === "ieee" || style === "vancouver") && (
+              <div className="mb-4 flex items-center gap-3 text-sm">
+                <label htmlFor="project-start-number">起始編號</label>
+                <Input
+                  id="project-start-number"
+                  type="number"
+                  min={1}
+                  max={9999}
+                  value={startNumber}
+                  onChange={(event) => {
+                    const value = Number.parseInt(event.target.value, 10);
+                    if (Number.isInteger(value) && value > 0) {
+                      setStartNumber(Math.min(value, 9999));
+                    }
+                  }}
+                  className="h-9 w-24 rounded-none"
+                />
+              </div>
+            )}
+            <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
+              {allText || "目前沒有可匯出的文獻。"}
+            </pre>
+          </CardContent>
+        </Card>
+
+        <InlineConverter projectId={projectId} onSaved={handleConverterSaved} />
+
+        {project.references.length > 0 && (
+          <ReferenceBatchBar
+            totalCount={project.references.length}
+            selectedCount={selectedCount}
+            allSelected={allSelected}
+            disabled={selectionDisabled}
+            busy={bulkDeleting}
+            onSelectAll={toggleSelectAll}
+            onClear={() => setSelectedIds(new Set())}
+            onMoveToTop={() => moveSelected("top")}
+            onMoveToBottom={() => moveSelected("bottom")}
+            onDelete={() =>
+              setDeleteTarget({
+                ids: Array.from(selectedIds),
+                count: selectedCount,
+              })
+            }
+            onCopy={() => void copySelected()}
+            onDownload={downloadSelected}
+            onDownloadRis={downloadSelectedRis}
+          />
+        )}
+
+        {project.references.length > 1 && (
+          <div className="mb-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <p>拖曳每筆文獻左側的把手即可調整引用與匯出順序。</p>
+            <p className="shrink-0" aria-live="polite">
+              {reorderStatus}
+            </p>
+          </div>
+        )}
+
+        {project.references.length === 0 ? (
           <Card className="rounded-none border-dashed">
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
               此專案目前沒有文獻。請在上方「批次加入文獻」輸入 DOI 或標題。
             </CardContent>
           </Card>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={project.references.map((reference) => reference.id)}
-            strategy={verticalListSortingStrategy}
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
           >
-            <div className="space-y-4">
-              {project.references.map((reference, index) => (
-                <SortableReference
-                  key={reference.id}
-                  reference={reference}
-                  index={index}
-                  startNumber={startNumber}
-                  style={style}
-                  projectId={projectId}
-                  isEditing={editingId === reference.id}
-                  dragDisabled={
-                    reorderPending || editingId !== null || bulkDeleting
-                  }
-                  actionsDisabled={reorderPending}
-                  selected={selectedIds.has(reference.id)}
-                  selectionDisabled={selectionDisabled}
-                  dragGroupIds={dragGroup}
-                  activeDragId={activeDragId}
-                  dragOffset={dragOffset}
-                  onToggleSelected={() => toggleSelected(reference.id)}
-                  onEdit={() => setEditingId(reference.id)}
-                  onDelete={() => void deleteReference(reference)}
-                  onSaved={updateReference}
-                  onCancel={() => setEditingId(null)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+            <SortableContext
+              items={project.references.map((reference) => reference.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {project.references.map((reference, index) => (
+                  <SortableReference
+                    key={reference.id}
+                    reference={reference}
+                    index={index}
+                    startNumber={startNumber}
+                    style={style}
+                    projectId={projectId}
+                    isEditing={editingId === reference.id}
+                    dragDisabled={
+                      reorderPending || editingId !== null || bulkDeleting
+                    }
+                    actionsDisabled={reorderPending}
+                    selected={selectedIds.has(reference.id)}
+                    selectionDisabled={selectionDisabled}
+                    dragGroupIds={dragGroup}
+                    activeDragId={activeDragId}
+                    dragOffset={dragOffset}
+                    onToggleSelected={() => toggleSelected(reference.id)}
+                    onEdit={() => setEditingId(reference.id)}
+                    onDelete={() => void deleteReference(reference)}
+                    onSaved={updateReference}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
       </main>
 
       <Dialog
         open={deleteTarget !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen && !bulkDeleting) {
-            setDeleteTarget(null)
+            setDeleteTarget(null);
           }
         }}
       >
@@ -957,7 +996,8 @@ export default function ProjectDetailPage() {
               <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
                 <DialogTitle>刪除選取的文獻</DialogTitle>
                 <DialogDescription className="mt-1">
-                  確定要刪除選取的 {deleteTarget?.count ?? 0} 筆文獻嗎？此動作無法復原。
+                  確定要刪除選取的 {deleteTarget?.count ?? 0}{" "}
+                  筆文獻嗎？此動作無法復原。
                 </DialogDescription>
 
                 <div className="mt-5 flex flex-wrap justify-end gap-2">
@@ -989,5 +1029,5 @@ export default function ProjectDetailPage() {
         </DialogPortal>
       </Dialog>
     </>
-  )
+  );
 }
