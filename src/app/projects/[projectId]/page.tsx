@@ -45,6 +45,7 @@ import {
   DialogViewport,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { InlineConverter } from "@/components/projects/inline-converter"
 import { ReferenceBatchBar } from "@/components/projects/reference-batch-bar"
 import {
@@ -288,6 +289,101 @@ export default function ProjectDetailPage() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [dragGroup, setDragGroup] = useState<Set<string>>(new Set())
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+
+  // Edit Project Settings state
+  const [editProjectOpen, setEditProjectOpen] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editDefaultStyle, setEditDefaultStyle] = useState("apa")
+  const [savingProject, setSavingProject] = useState(false)
+  const [editProjectError, setEditProjectError] = useState("")
+
+  function openEditProjectDialog() {
+    if (!project) return
+    setEditName(project.name)
+    setEditDescription(project.description || "")
+    setEditDefaultStyle(project.defaultStyle)
+    setEditProjectError("")
+    setEditProjectOpen(true)
+  }
+
+  async function handleSaveProjectDetails() {
+    if (!project) return
+    const trimmedName = editName.trim()
+    if (!trimmedName) {
+      setEditProjectError("請輸入專案名稱。")
+      return
+    }
+
+    setSavingProject(true)
+    setEditProjectError("")
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          description: editDescription || null,
+          defaultStyle: editDefaultStyle,
+        }),
+      })
+      const payload = (await response.json()) as {
+        project?: ProjectData
+        error?: string
+      }
+
+      if (!response.ok || !payload.project) {
+        setEditProjectError(payload.error || "儲存專案失敗。")
+        return
+      }
+
+      setProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: payload.project?.name ?? trimmedName,
+              description: payload.project?.description ?? editDescription,
+              defaultStyle: payload.project?.defaultStyle ?? editDefaultStyle,
+            }
+          : null,
+      )
+      setEditProjectOpen(false)
+      toast.success("專案設定已更新。")
+    } catch {
+      setEditProjectError("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setSavingProject(false)
+    }
+  }
+
+  async function handleSetDefaultStyle(newDefaultStyle: CitationStyle) {
+    if (!project || project.defaultStyle === newDefaultStyle) return
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ defaultStyle: newDefaultStyle }),
+      })
+      const payload = (await response.json()) as {
+        project?: ProjectData
+        error?: string
+      }
+      if (!response.ok || !payload.project) {
+        toast.error(payload.error || "更新預設格式失敗。")
+        return
+      }
+      setProject((prev) =>
+        prev ? { ...prev, defaultStyle: newDefaultStyle } : null,
+      )
+      const styleLabel =
+        STYLE_OPTIONS.find((opt) => opt.id === newDefaultStyle)?.label ??
+        newDefaultStyle.toUpperCase()
+      toast.success(`已將「${styleLabel}」設為專案預設格式。`)
+    } catch {
+      toast.error("無法連線到專案服務，請稍後再試。")
+    }
+  }
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
@@ -797,22 +893,41 @@ export default function ProjectDetailPage() {
           <div>
             <Link
               href="/"
-              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="size-4" /> 我的專案
             </Link>
-            <h1 className="font-heading text-4xl font-semibold tracking-[-0.05em]">
-              {project.name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-heading text-4xl font-semibold tracking-[-0.05em]">
+                {project.name}
+              </h1>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openEditProjectDialog}
+                className="rounded-none gap-1.5"
+                title="編輯專案名稱、描述與預設格式"
+              >
+                <Pencil className="size-3.5" /> 編輯專案
+              </Button>
+            </div>
             {project.description && (
               <p className="mt-2 text-sm text-muted-foreground">
                 {project.description}
               </p>
             )}
           </div>
-          <span className="text-sm text-muted-foreground">
-            {project.references.length} 筆文獻
-          </span>
+          <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground text-sm">
+              {project.references.length} 筆文獻
+            </span>
+            <span>
+              預設：
+              {STYLE_OPTIONS.find((o) => o.id === project.defaultStyle)
+                ?.label ?? project.defaultStyle.toUpperCase()}
+            </span>
+          </div>
         </div>
 
         {error && (
@@ -824,7 +939,7 @@ export default function ProjectDetailPage() {
         <Card className="mb-6 rounded-none border-foreground/30">
           <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-xl">引用格式與匯出</CardTitle>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={style}
                 onChange={(event) =>
@@ -839,6 +954,18 @@ export default function ProjectDetailPage() {
                   </option>
                 ))}
               </select>
+              {style !== project.defaultStyle && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleSetDefaultStyle(style)}
+                  className="rounded-none text-xs text-muted-foreground hover:text-foreground"
+                  title="將目前選擇的格式儲存為此專案的預設格式"
+                >
+                  設為預設格式
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -1018,6 +1145,97 @@ export default function ProjectDetailPage() {
                     className="rounded-none"
                   >
                     {bulkDeleting ? "刪除中…" : "刪除選取"}
+                  </Button>
+                </div>
+              </div>
+            </DialogPopup>
+          </DialogViewport>
+        </DialogPortal>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog
+        open={editProjectOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !savingProject) {
+            setEditProjectOpen(false)
+            setEditProjectError("")
+          }
+        }}
+      >
+        <DialogPortal>
+          <DialogBackdrop />
+          <DialogViewport>
+            <DialogPopup className="rounded-none">
+              <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
+                <DialogTitle>編輯專案設定</DialogTitle>
+                <DialogDescription className="mt-1">
+                  修改專案名稱、描述與預設引用格式。
+                </DialogDescription>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-1 text-sm sm:col-span-2">
+                    <span className="font-semibold">專案名稱</span>
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      maxLength={100}
+                      className="rounded-none"
+                      autoFocus
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm sm:col-span-2">
+                    <span className="font-semibold">描述（選填）</span>
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      maxLength={500}
+                      placeholder="這個專案的用途…"
+                      className="min-h-24 rounded-none"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm sm:col-span-2">
+                    <span className="font-semibold">預設引用格式</span>
+                    <select
+                      value={editDefaultStyle}
+                      onChange={(e) => setEditDefaultStyle(e.target.value)}
+                      className="h-10 rounded-none border border-input bg-card px-3 text-sm"
+                    >
+                      {STYLE_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {editProjectError && (
+                  <p className="mt-4 text-sm text-destructive" role="alert">
+                    {editProjectError}
+                  </p>
+                )}
+
+                <div className="mt-6 flex justify-end gap-2">
+                  <DialogClose
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={savingProject}
+                        className="rounded-none"
+                      >
+                        取消
+                      </Button>
+                    }
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => void handleSaveProjectDetails()}
+                    disabled={savingProject}
+                    className="rounded-none"
+                  >
+                    {savingProject ? "儲存中…" : "儲存設定"}
                   </Button>
                 </div>
               </div>
