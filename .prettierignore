@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+tsconfig.tsbuildinfo
+.next
+public
+
+# Vendored CSL styles and locales are synced from upstream by scripts/sync-csl-assets.mjs
+src/lib/citation-engine/styles
+src/lib/citation-engine/locales
+
+# Generated and hand-tuned prose
+*.md
+LICENSES
