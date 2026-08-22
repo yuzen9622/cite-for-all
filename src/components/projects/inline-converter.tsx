@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { LoaderCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { useCitationConverter } from "@/hooks/use-citation-converter"
+import {
+  getPendingConversion,
+  clearPendingConversion,
+} from "@/lib/anonymous-session"
 import { buildReferenceItems } from "@/lib/references/save-payload"
 import type { StoredReference } from "@/app/projects/[projectId]/page"
 
@@ -22,6 +26,20 @@ export function InlineConverter({ projectId, onSaved }: InlineConverterProps) {
   const [savedSkips, setSavedSkips] = useState<
     Array<{ input: string; reason: string }>
   >([])
+
+  const initializedPendingRef = useRef(false)
+  const { convert } = converter
+
+  useEffect(() => {
+    if (initializedPendingRef.current) return
+    initializedPendingRef.current = true
+    const pending = getPendingConversion()
+    if (pending?.rawInput) {
+      clearPendingConversion()
+      toast.info("已自動載入並開始轉換您剛才的文獻。")
+      void convert(pending.rawInput)
+    }
+  }, [convert])
 
   async function saveReferences() {
     if (converter.successfulResults.length === 0) {

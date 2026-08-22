@@ -1,14 +1,19 @@
 "use client"
 
-import Link from "next/link"
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   Copy,
   Download,
   FolderPlus,
   LoaderCircle,
+  Plus,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +23,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogClose,
+  DialogDescription,
+  DialogPopup,
+  DialogPortal,
+  DialogTitle,
+  DialogViewport,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,19 +50,252 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { SignInDialog } from "@/components/auth/sign-in-dialog"
 import { useCitationConverter } from "@/hooks/use-citation-converter"
+import { savePendingConversion } from "@/lib/anonymous-session"
+import { buildReferenceItems } from "@/lib/references/save-payload"
 import { sanitizeHtml } from "@/lib/sanitize-html"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
 
-export function CitationConverter() {
+interface ProjectOption {
+  id: string
+  name: string
+  _count?: { references: number }
+}
+
+const styles = [
+  ["apa", "APA 7th"],
+  ["mla", "MLA 9"],
+  ["chicago", "Chicago"],
+  ["harvard", "Harvard"],
+  ["ieee", "IEEE"],
+  ["vancouver", "Vancouver"],
+  ["bibtex", "BibTeX"],
+] as const
+
+interface CitationConverterProps {
+  showHeader?: boolean
+}
+
+export function CitationConverter({
+  showHeader = true,
+}: CitationConverterProps = {}) {
+  const router = useRouter()
+  const { data: session } = useSession()
+  const user = session?.user
+
   const converter = useCitationConverter()
   const failedCount = converter.failedResults.length
 
+  const [projects, setProjects] = React.useState<ProjectOption[]>([])
+  const [projectsLoading, setProjectsLoading] = React.useState(false)
+  const [savingToProject, setSavingToProject] = React.useState(false)
+
+  // Create & Save state
+  const [createAndSaveOpen, setCreateAndSaveOpen] = React.useState(false)
+  const [newProjectName, setNewProjectName] = React.useState("")
+  const [newProjectDescription, setNewProjectDescription] = React.useState("")
+  const [newProjectStyle, setNewProjectStyle] = React.useState("apa")
+  const [creatingProject, setCreatingProject] = React.useState(false)
+  const [createError, setCreateError] = React.useState("")
+
+  // Fetch projects when user is logged in
+  React.useEffect(() => {
+    if (!user) return
+
+    let isMounted = true
+    async function loadUserProjects() {
+      setProjectsLoading(true)
+      try {
+        const res = await fetch("/api/projects", {
+          headers: { "Cache-Control": "no-cache" },
+        })
+        if (res.ok) {
+          const payload = (await res.json()) as { projects?: ProjectOption[] }
+          if (isMounted && payload.projects) {
+            setProjects(payload.projects)
+          }
+        }
+      } catch {
+        // ignore background fetch error
+      } finally {
+        if (isMounted) setProjectsLoading(false)
+      }
+    }
+
+    void loadUserProjects()
+    return () => {
+      isMounted = false
+    }
+  }, [user])
+
+  async function handleSaveToProject(
+    targetProjectId: string,
+    targetProjectName: string,
+  ) {
+    if (converter.successfulResults.length === 0) return
+
+    setSavingToProject(true)
+    try {
+      const response = await fetch(
+        `/api/projects/${targetProjectId}/references`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: buildReferenceItems(converter.successfulResults),
+          }),
+        },
+      )
+      const payload = (await response.json()) as {
+        created?: unknown[]
+        skipped?: Array<{ input: string; reason: string }>
+        error?: string
+      }
+
+      if (!response.ok) {
+        toast.error(payload.error || "儲存失敗，請稍後再試。")
+        return
+      }
+
+      const createdCount = payload.created?.length ?? 0
+      const skippedCount = payload.skipped?.length ?? 0
+
+      // Update local reference count
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === targetProjectId
+            ? {
+                ...p,
+                _count: {
+                  references: (p._count?.references ?? 0) + createdCount,
+                },
+              }
+            : p,
+        ),
+      )
+
+      if (skippedCount > 0) {
+        toast.success(
+          `已存入 ${createdCount} 筆文獻至「${targetProjectName}」。`,
+          {
+            description: `${skippedCount} 筆因 DOI 重複而略過。`,
+            action: {
+              label: "查看專案",
+              onClick: () => router.push(`/projects/${targetProjectId}`),
+            },
+          },
+        )
+      } else {
+        toast.success(
+          `已存入 ${createdCount} 筆文獻至「${targetProjectName}」。`,
+          {
+            action: {
+              label: "查看專案",
+              onClick: () => router.push(`/projects/${targetProjectId}`),
+            },
+          },
+        )
+      }
+    } catch {
+      toast.error("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setSavingToProject(false)
+    }
+  }
+
+  function openCreateAndSave() {
+    setNewProjectName("")
+    setNewProjectDescription("")
+    setNewProjectStyle("apa")
+    setCreateError("")
+    setCreateAndSaveOpen(true)
+  }
+
+  async function handleCreateAndSave() {
+    const trimmedName = newProjectName.trim()
+    if (!trimmedName) {
+      setCreateError("請輸入專案名稱。")
+      return
+    }
+
+    setCreatingProject(true)
+    setCreateError("")
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          description: newProjectDescription || null,
+          defaultStyle: newProjectStyle,
+        }),
+      })
+      const payload = (await res.json()) as {
+        project?: { id: string; name: string }
+        error?: string
+      }
+
+      if (!res.ok || !payload.project) {
+        setCreateError(payload.error || "建立專案失敗。")
+        return
+      }
+
+      const createdProject = payload.project
+
+      const saveRes = await fetch(
+        `/api/projects/${createdProject.id}/references`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: buildReferenceItems(converter.successfulResults),
+          }),
+        },
+      )
+      const savePayload = (await saveRes.json()) as {
+        created?: unknown[]
+        skipped?: Array<{ input: string; reason: string }>
+        error?: string
+      }
+
+      if (!saveRes.ok) {
+        toast.error(
+          `專案「${createdProject.name}」已建立，但存入文獻失敗：${savePayload.error || "請稍後重試。"}`,
+        )
+        setCreateAndSaveOpen(false)
+        router.push(`/projects/${createdProject.id}`)
+        return
+      }
+
+      setCreateAndSaveOpen(false)
+      const createdCount = savePayload.created?.length ?? 0
+      const skippedCount = savePayload.skipped?.length ?? 0
+      if (skippedCount > 0) {
+        toast.success(
+          `已建立專案「${createdProject.name}」並存入 ${createdCount} 筆文獻。`,
+          {
+            description: `${skippedCount} 筆因 DOI 重複而略過。`,
+          },
+        )
+      } else {
+        toast.success(
+          `已建立專案「${createdProject.name}」並存入 ${createdCount} 筆文獻。`,
+        )
+      }
+      router.push(`/projects/${createdProject.id}`)
+    } catch {
+      setCreateError("無法連線到專案服務，請稍後再試。")
+    } finally {
+      setCreatingProject(false)
+    }
+  }
+
   return (
     <>
-      <SiteHeader />
+      {showHeader && <SiteHeader />}
       <main className="mx-auto w-full max-w-[1480px] px-3 pb-10 sm:px-7">
         <section
           className="grid items-end gap-5 py-10 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.55fr)] md:gap-12 md:py-16"
@@ -134,8 +390,7 @@ export function CitationConverter() {
               </Button>
 
               <p className="mt-4 text-xs leading-6 text-muted-foreground">
-                未登入時只做即時查詢；登入後可到「我的專案」頁面內直接輸入 DOI
-                或標題加入文獻。正式投稿前仍建議依目標期刊規範複核。
+                未登入時只做即時查詢；登入後可將文獻直接存入專案、自訂排序並隨時匯出。
               </p>
             </section>
 
@@ -199,24 +454,88 @@ export function CitationConverter() {
                           <Download />
                           下載 .ris
                         </Button>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
+
+                        {!user ? (
+                          <SignInDialog
+                            callbackUrl="/"
+                            trigger={
                               <Button
-                                render={<Link href="/" />}
                                 type="button"
-                                variant="outline"
                                 size="sm"
+                                onClick={() =>
+                                  savePendingConversion(
+                                    converter.rawInput,
+                                    converter.successfulResults.length,
+                                  )
+                                }
                                 className="flex-1 rounded-none sm:flex-none"
-                              />
+                              >
+                                <FolderPlus className="size-4" />
+                                <span>
+                                  登入並保存{" "}
+                                  {converter.successfulResults.length} 筆
+                                </span>
+                              </Button>
                             }
-                          >
-                            <FolderPlus /> 前往我的專案
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            前往我的專案建立或加入文獻
-                          </TooltipContent>
-                        </Tooltip>
+                          />
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={savingToProject}
+                                  className="flex-1 rounded-none sm:flex-none"
+                                />
+                              }
+                            >
+                              <FolderPlus className="size-4" />
+                              <span>
+                                {savingToProject ? "儲存中…" : "存進專案"}
+                              </span>
+                              <ChevronDown className="ml-1 size-3.5 opacity-70" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel>
+                                選擇儲存專案
+                              </DropdownMenuLabel>
+                              {projectsLoading ? (
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                  載入專案中…
+                                </div>
+                              ) : projects.length === 0 ? (
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                  尚無專案
+                                </div>
+                              ) : (
+                                projects.map((proj) => (
+                                  <DropdownMenuItem
+                                    key={proj.id}
+                                    onClick={() =>
+                                      void handleSaveToProject(
+                                        proj.id,
+                                        proj.name,
+                                      )
+                                    }
+                                  >
+                                    <span className="truncate">
+                                      {proj.name}
+                                    </span>
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                      {proj._count?.references ?? 0} 筆
+                                    </span>
+                                  </DropdownMenuItem>
+                                ))
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={openCreateAndSave}>
+                                <Plus className="size-4" />
+                                <span>建立新專案並儲存…</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     )}
                   </div>
@@ -254,47 +573,45 @@ export function CitationConverter() {
                       }
                       className="my-5"
                     >
-                      <TabsList
-                        className="grid h-auto w-full grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0"
-                        style={{ height: "auto" }}
-                      >
-                        {STYLE_OPTIONS.map((option) => (
+                      <TabsList className="h-auto flex-wrap gap-1 rounded-none bg-muted/60 p-1">
+                        {STYLE_OPTIONS.map((style) => (
                           <TabsTrigger
-                            key={option.id}
-                            value={option.id}
-                            className="h-auto min-h-11 rounded-none border-r border-b px-2 py-2 text-center text-xs leading-tight font-extrabold whitespace-normal data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
+                            key={style.id}
+                            value={style.id}
+                            className="rounded-none px-3 py-1.5 text-xs font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground"
                           >
-                            {option.label}
+                            {style.label}
                           </TabsTrigger>
                         ))}
                       </TabsList>
                     </Tabs>
                   )}
 
-                  {converter.successfulResults.length > 0 &&
-                    (converter.style === "ieee" ||
-                      converter.style === "vancouver") && (
-                      <div className="mb-4 flex items-center gap-3 text-sm">
-                        <label htmlFor="citation-start-number">起始編號</label>
-                        <Input
-                          id="citation-start-number"
-                          type="number"
-                          min={1}
-                          max={9999}
-                          step={1}
-                          value={converter.startNumber}
-                          onChange={(event) =>
-                            converter.updateStartNumber(event.target.value)
-                          }
-                          className="h-9 w-24 rounded-none font-mono text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          用於接續既有參考文獻清單的編號
-                        </span>
-                      </div>
-                    )}
+                  {(converter.style === "ieee" ||
+                    converter.style === "vancouver") && (
+                    <div className="mb-4 flex flex-wrap items-center gap-2 border border-foreground/20 bg-secondary/30 px-3 py-2 text-xs">
+                      <span className="font-semibold text-foreground">
+                        自訂起始編號：
+                      </span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={9999}
+                        value={converter.startNumber}
+                        onChange={(e) =>
+                          converter.updateStartNumber(e.target.value)
+                        }
+                        className="h-7 w-20 rounded-none bg-card px-2 font-mono text-xs"
+                      />
+                      <span className="text-muted-foreground">
+                        {converter.style === "ieee"
+                          ? "（預設 [1]，可填 [4] 等連續編號）"
+                          : "（預設 1.，可填 4. 等連續編號）"}
+                      </span>
+                    </div>
+                  )}
 
-                  <div className="grid max-h-[min(28rem,60vh)] min-w-0 max-w-full gap-3.5 overflow-auto overscroll-contain pr-1">
+                  <div className="space-y-4">
                     {converter.successfulResults.map((result, index) => {
                       const output = converter.citationTextAt(
                         result,
@@ -306,38 +623,27 @@ export function CitationConverter() {
                         converter.style,
                         index,
                       )
-                      const copyId = `item-${index}`
+                      const copyId = `single-${index}`
 
                       return (
                         <Card
                           key={`${result.input}-${index}`}
-                          className="min-w-0 max-w-full gap-0 rounded-none border bg-card py-0 shadow-none"
+                          className="rounded-none border border-foreground/30 bg-card shadow-xs"
                         >
-                          <CardHeader className="min-w-0 rounded-none border-b px-4 py-3.5">
-                            <Badge
-                              variant="outline"
-                              className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
-                            >
-                              ITEM{" "}
-                              {String(index + converter.startNumber).padStart(
-                                2,
-                                "0",
-                              )}{" "}
-                              · {result.data.inputType.toUpperCase()} ·{" "}
-                              {result.data.provenance.provider.toUpperCase()}
-                            </Badge>
-                            <CardTitle className="min-w-0 pr-14 text-sm font-extrabold [overflow-wrap:anywhere]">
-                              {result.data.metadata.title}
-                            </CardTitle>
-                            <p className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                              {[
-                                result.data.metadata.year,
-                                result.data.metadata.journal,
-                                result.data.metadata.doi,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </p>
+                          <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-2.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="rounded-none font-mono text-[10px] uppercase"
+                              >
+                                #{index + 1} · {result.data.inputType}
+                              </Badge>
+                              {result.data.metadata.title && (
+                                <CardTitle className="line-clamp-1 font-sans text-xs font-semibold text-muted-foreground">
+                                  {result.data.metadata.title}
+                                </CardTitle>
+                              )}
+                            </div>
                             <CardAction>
                               <Tooltip>
                                 <TooltipTrigger
@@ -416,6 +722,101 @@ export function CitationConverter() {
             </section>
           </CardContent>
         </Card>
+
+        {/* Create and Save Dialog for logged in user */}
+        <Dialog
+          open={createAndSaveOpen}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen && !creatingProject) {
+              setCreateAndSaveOpen(false)
+              setCreateError("")
+            }
+          }}
+        >
+          <DialogPortal>
+            <DialogBackdrop />
+            <DialogViewport>
+              <DialogPopup className="rounded-none">
+                <div className="border border-foreground/30 bg-secondary/40 p-4 sm:p-5">
+                  <DialogTitle>建立新專案並儲存</DialogTitle>
+                  <DialogDescription className="mt-1">
+                    建立專案並將目前轉換的 {converter.successfulResults.length}{" "}
+                    筆文獻直接存入。
+                  </DialogDescription>
+
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <label className="grid gap-1 text-sm sm:col-span-2">
+                      <span className="font-semibold">專案名稱</span>
+                      <Input
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        maxLength={100}
+                        placeholder="例如：畢業論文文獻庫"
+                        className="rounded-none"
+                        autoFocus
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span className="font-semibold">描述（選填）</span>
+                      <Textarea
+                        value={newProjectDescription}
+                        onChange={(e) =>
+                          setNewProjectDescription(e.target.value)
+                        }
+                        maxLength={500}
+                        placeholder="專案用途…"
+                        className="min-h-24 rounded-none"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span className="font-semibold">預設引用格式</span>
+                      <select
+                        value={newProjectStyle}
+                        onChange={(e) => setNewProjectStyle(e.target.value)}
+                        className="h-10 rounded-none border border-input bg-card px-3 text-sm"
+                      >
+                        {styles.map(([val, lbl]) => (
+                          <option key={val} value={val}>
+                            {lbl}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {createError && (
+                    <p className="mt-4 text-sm text-destructive" role="alert">
+                      {createError}
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex justify-end gap-2">
+                    <DialogClose
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={creatingProject}
+                          className="rounded-none"
+                        >
+                          取消
+                        </Button>
+                      }
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => void handleCreateAndSave()}
+                      disabled={creatingProject}
+                      className="rounded-none"
+                    >
+                      {creatingProject ? "建立並儲存中…" : "建立並儲存"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogPopup>
+            </DialogViewport>
+          </DialogPortal>
+        </Dialog>
 
         <footer className="flex flex-col justify-between gap-2 pt-5 text-[11px] text-muted-foreground sm:flex-row">
           <span>© {new Date().getFullYear()} Cite for All · MIT License</span>

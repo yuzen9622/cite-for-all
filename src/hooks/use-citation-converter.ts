@@ -77,15 +77,23 @@ export function useCitationConverter() {
     setError("")
   }
 
-  async function convert() {
+  async function convert(customInput?: string | unknown) {
+    const isStringInput = typeof customInput === "string"
+    const inputToUse = isStringInput ? customInput : rawInput
+    const inputsToParse = isStringInput
+      ? parseCitationInputs(customInput)
+      : parsedInputs
+    if (isStringInput) {
+      setRawInput(customInput)
+    }
     setError("")
 
-    if (!rawInput.trim()) {
+    if (!inputToUse.trim()) {
       setError("請先貼上 DOI 或完整論文標題。")
       return
     }
 
-    if (parsedInputs.length > MAX_BATCH_SIZE) {
+    if (inputsToParse.length > MAX_BATCH_SIZE) {
       setError(`單次最多可轉換 ${MAX_BATCH_SIZE} 筆文獻。`)
       return
     }
@@ -97,7 +105,7 @@ export function useCitationConverter() {
       const response = await fetch("/api/cite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: parsedInputs }),
+        body: JSON.stringify({ inputs: inputsToParse }),
       })
       const payload = (await response.json()) as ApiResponse
 
