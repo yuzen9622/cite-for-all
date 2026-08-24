@@ -297,29 +297,6 @@ export function CitationConverter({
     <>
       {showHeader && <SiteHeader />}
       <main className="mx-auto w-full max-w-[1480px] px-3 pb-10 sm:px-7">
-        <section
-          className="grid items-end gap-5 py-10 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.55fr)] md:gap-12 md:py-16"
-          aria-labelledby="page-title"
-        >
-          <div>
-            <p className="mb-4 text-xs font-extrabold tracking-[0.14em] text-[#b84025] uppercase">
-              Citation converter · 7 formats
-            </p>
-            <h1
-              id="page-title"
-              className="max-w-4xl font-heading text-[clamp(3rem,7vw,5.75rem)] leading-[0.94] font-medium tracking-[-0.065em]"
-            >
-              文獻格式，
-              <br />
-              一次<span className="text-accent italic">轉對。</span>
-            </h1>
-          </div>
-          <p className="mb-1 max-w-2xl text-base leading-7 text-muted-foreground">
-            貼上 DOI、DOI 網址或完整論文標題，即可取得 APA 7th、MLA 9、Chicago
-            Author–Date、Harvard Cite Them Right、IEEE、Vancouver 與 BibTeX。
-          </p>
-        </section>
-
         <Card className="gap-0 rounded-none border border-foreground/90 bg-card/80 py-0 shadow-[0_20px_60px_rgb(20_36_31/0.10)] backdrop-blur-sm">
           <CardContent className="grid min-h-[620px] grid-cols-1 p-0 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <section className="border-b p-4 sm:p-7 lg:border-r lg:border-b-0">
@@ -388,10 +365,6 @@ export function CitationConverter({
                   <ArrowRight />
                 )}
               </Button>
-
-              <p className="mt-4 text-xs leading-6 text-muted-foreground">
-                未登入時只做即時查詢；登入後可將文獻直接存入專案、自訂排序並隨時匯出。
-              </p>
             </section>
 
             <section className="min-w-0 max-w-full overflow-hidden bg-card/60 p-4 sm:p-7">
@@ -573,45 +546,46 @@ export function CitationConverter({
                       }
                       className="my-5"
                     >
-                      <TabsList className="h-auto flex-wrap gap-1 rounded-none bg-muted/60 p-1">
-                        {STYLE_OPTIONS.map((style) => (
+                      <TabsList className="grid !h-auto w-full grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-0 rounded-none border border-r-0 border-b-0 bg-transparent p-0">
+                        {STYLE_OPTIONS.map((option) => (
                           <TabsTrigger
-                            key={style.id}
-                            value={style.id}
-                            className="rounded-none px-3 py-1.5 text-xs font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground"
+                            key={option.id}
+                            value={option.id}
+                            className="h-auto min-h-11 rounded-none border-r border-b px-2 py-2 text-center text-xs leading-tight font-extrabold whitespace-normal data-active:bg-primary data-active:text-primary-foreground data-active:hover:text-primary-foreground dark:data-active:hover:text-primary-foreground"
                           >
-                            {style.label}
+                            {option.label}
                           </TabsTrigger>
                         ))}
                       </TabsList>
                     </Tabs>
                   )}
 
-                  {(converter.style === "ieee" ||
-                    converter.style === "vancouver") && (
-                    <div className="mb-4 flex flex-wrap items-center gap-2 border border-foreground/20 bg-secondary/30 px-3 py-2 text-xs">
-                      <span className="font-semibold text-foreground">
-                        自訂起始編號：
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={9999}
-                        value={converter.startNumber}
-                        onChange={(e) =>
-                          converter.updateStartNumber(e.target.value)
-                        }
-                        className="h-7 w-20 rounded-none bg-card px-2 font-mono text-xs"
-                      />
-                      <span className="text-muted-foreground">
-                        {converter.style === "ieee"
-                          ? "（預設 [1]，可填 [4] 等連續編號）"
-                          : "（預設 1.，可填 4. 等連續編號）"}
-                      </span>
-                    </div>
-                  )}
+                  {converter.successfulResults.length > 0 &&
+                    (converter.style === "ieee" ||
+                      converter.style === "vancouver") && (
+                      <div className="mb-4 flex items-center gap-3 text-sm">
+                        <label htmlFor="citation-start-number">起始編號</label>
+                        <Input
+                          id="citation-start-number"
+                          type="number"
+                          min={1}
+                          max={9999}
+                          step={1}
+                          value={converter.startNumber}
+                          onChange={(event) =>
+                            converter.updateStartNumber(event.target.value)
+                          }
+                          className="h-9 w-24 rounded-none font-mono text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {converter.style === "ieee"
+                            ? "用於接續既有參考文獻清單的編號（如 [4]）"
+                            : "用於接續既有參考文獻清單的編號（如 4.）"}
+                        </span>
+                      </div>
+                    )}
 
-                  <div className="space-y-4">
+                  <div className="grid max-h-[min(28rem,60vh)] min-w-0 max-w-full gap-3.5 overflow-auto overscroll-contain pr-1">
                     {converter.successfulResults.map((result, index) => {
                       const output = converter.citationTextAt(
                         result,
@@ -623,27 +597,38 @@ export function CitationConverter({
                         converter.style,
                         index,
                       )
-                      const copyId = `single-${index}`
+                      const copyId = `item-${index}`
 
                       return (
                         <Card
                           key={`${result.input}-${index}`}
-                          className="rounded-none border border-foreground/30 bg-card shadow-xs"
+                          className="min-w-0 max-w-full gap-0 rounded-none border bg-card py-0 shadow-none"
                         >
-                          <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-2.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className="rounded-none font-mono text-[10px] uppercase"
-                              >
-                                #{index + 1} · {result.data.inputType}
-                              </Badge>
-                              {result.data.metadata.title && (
-                                <CardTitle className="line-clamp-1 font-sans text-xs font-semibold text-muted-foreground">
-                                  {result.data.metadata.title}
-                                </CardTitle>
-                              )}
-                            </div>
+                          <CardHeader className="min-w-0 rounded-none border-b px-4 py-3.5">
+                            <Badge
+                              variant="outline"
+                              className="mb-1 rounded-none font-mono text-[10px] tracking-[0.08em] text-[#b84025]"
+                            >
+                              ITEM{" "}
+                              {String(index + converter.startNumber).padStart(
+                                2,
+                                "0",
+                              )}{" "}
+                              · {result.data.inputType.toUpperCase()} ·{" "}
+                              {result.data.provenance.provider.toUpperCase()}
+                            </Badge>
+                            <CardTitle className="min-w-0 pr-14 text-sm font-extrabold [overflow-wrap:anywhere]">
+                              {result.data.metadata.title}
+                            </CardTitle>
+                            <p className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                              {[
+                                result.data.metadata.year,
+                                result.data.metadata.journal,
+                                result.data.metadata.doi,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
                             <CardAction>
                               <Tooltip>
                                 <TooltipTrigger
@@ -681,7 +666,6 @@ export function CitationConverter({
                             {outputHtml ? (
                               <div
                                 className="m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] p-4 font-heading text-[15px] leading-7"
-                                // citeproc 已跳脫 metadata 文字；此處再經白名單淨化
                                 dangerouslySetInnerHTML={{
                                   __html: sanitizeHtml(outputHtml),
                                 }}

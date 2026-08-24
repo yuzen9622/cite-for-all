@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from "vitest"
 import {
   savePendingConversion,
@@ -6,9 +5,38 @@ import {
   clearPendingConversion,
 } from "./anonymous-session"
 
+const store = new Map<string, string>()
+
+const mockSessionStorage: Storage = {
+  getItem: (key: string) => store.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    store.set(key, String(value))
+  },
+  removeItem: (key: string) => {
+    store.delete(key)
+  },
+  clear: () => {
+    store.clear()
+  },
+  key: (index: number) => Array.from(store.keys())[index] ?? null,
+  get length() {
+    return store.size
+  },
+}
+
+Object.defineProperty(globalThis, "window", {
+  value: {
+    sessionStorage: mockSessionStorage,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  },
+  writable: true,
+  configurable: true,
+})
+
 describe("anonymous-session storage utility", () => {
   beforeEach(() => {
-    sessionStorage.clear()
+    mockSessionStorage.clear()
   })
 
   it("saves and retrieves pending conversion", () => {
@@ -32,7 +60,10 @@ describe("anonymous-session storage utility", () => {
   })
 
   it("handles corrupted json in storage gracefully", () => {
-    sessionStorage.setItem("cite_anonymous_pending_conversion", "invalid-json{")
+    mockSessionStorage.setItem(
+      "cite_anonymous_pending_conversion",
+      "invalid-json{",
+    )
     expect(getPendingConversion()).toBeNull()
   })
 })
