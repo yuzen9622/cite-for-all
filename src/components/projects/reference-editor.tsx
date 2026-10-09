@@ -53,6 +53,36 @@ export function ReferenceEditor({
       return
     }
 
+    const changes = Object.fromEntries(
+      Object.entries({
+        title: title.trim(),
+        authors: authors
+          .split(/\r?\n/)
+          .map((author) => author.trim())
+          .filter(Boolean),
+        year: year ? Number.parseInt(year, 10) : null,
+        journal,
+        volume,
+        issue,
+        pages,
+        doi,
+        publisher,
+        url,
+      }).filter(
+        ([key, value]) =>
+          JSON.stringify(value) !==
+          JSON.stringify(
+            key === "year"
+              ? reference.year
+              : (reference[key as keyof EditableReference] ?? ""),
+          ),
+      ),
+    )
+    if (Object.keys(changes).length === 0) {
+      onCancel()
+      return
+    }
+
     setSaving(true)
     setError("")
     try {
@@ -61,21 +91,7 @@ export function ReferenceEditor({
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: title.trim(),
-            authors: authors
-              .split(/\r?\n/)
-              .map((author) => author.trim())
-              .filter(Boolean),
-            year: year ? Number.parseInt(year, 10) : null,
-            journal,
-            volume,
-            issue,
-            pages,
-            doi,
-            publisher,
-            url,
-          }),
+          body: JSON.stringify(changes),
         },
       )
       const payload = (await response.json()) as {
@@ -111,7 +127,9 @@ export function ReferenceEditor({
           />
         </label>
         <label className="grid gap-1 text-sm sm:col-span-2">
-          <span className="font-semibold">作者（每行一位）</span>
+          <span className="font-semibold">
+            作者（每行一位；新增個人用「姓, 名」，團體用「團體名稱,」）
+          </span>
           <Textarea
             value={authors}
             onChange={(event) => setAuthors(event.target.value)}

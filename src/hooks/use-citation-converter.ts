@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
+import { writeCitationClipboard } from "@/lib/clipboard"
 import {
   MAX_BATCH_SIZE,
   citationText,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/citations"
 import {
   citationExportHtml,
+  formatCitationEntries,
   citationExportText,
   formatCitationExport,
   formatCitationExportHtml,
@@ -44,7 +46,22 @@ export function useCitationConverter() {
   const [copied, setCopied] = useState<string | null>(null)
 
   const parsedInputs = useMemo(() => parseCitationInputs(rawInput), [rawInput])
-  const successfulResults = results.filter((result) => result.success)
+  const successfulResults = useMemo(
+    () => results.filter((result) => result.success),
+    [results],
+  )
+  const bibliography = useMemo(
+    () =>
+      formatCitationEntries(
+        successfulResults.map((result) => result.data),
+        style,
+        startNumber,
+      ),
+    [successfulResults, style, startNumber],
+  )
+  const displayResults = bibliography.map(
+    (entry) => successfulResults[entry.index],
+  )
   const failedResults = results
     .map((result, index) => ({ result, index }))
     .filter(
@@ -153,7 +170,10 @@ export function useCitationConverter() {
     style: CitationStyle,
     index: number,
   ) {
-    return citationExportText(result.data, style, index, startNumber)
+    return (
+      bibliography[index]?.text ??
+      citationExportText(result.data, style, index, startNumber)
+    )
   }
 
   function citationHtmlAt(
@@ -161,7 +181,10 @@ export function useCitationConverter() {
     style: CitationStyle,
     index: number,
   ) {
-    return citationExportHtml(result.data, style, index, startNumber)
+    return (
+      bibliography[index]?.html ??
+      citationExportHtml(result.data, style, index, startNumber)
+    )
   }
 
   function allCitationText() {
@@ -186,20 +209,11 @@ export function useCitationConverter() {
     copyId: string,
   ) {
     try {
-      if (html && typeof ClipboardItem !== "undefined") {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
-            "text/plain": new Blob([text], { type: "text/plain" }),
-          }),
-        ])
-      } else {
-        await navigator.clipboard.writeText(text)
-      }
+      const mode = await writeCitationClipboard(text, html)
       setCopied(copyId)
       window.setTimeout(() => setCopied(null), 1800)
       toast.success(
-        html ? "已複製（貼上 Office 會保留斜體）。" : "已複製到剪貼簿。",
+        mode === "rich" ? "已複製（含文字格式）。" : "已複製（純文字）。",
       )
     } catch {
       try {
@@ -246,6 +260,7 @@ export function useCitationConverter() {
     copied,
     parsedInputs,
     successfulResults,
+    displayResults,
     failedResults,
     updateInput,
     loadExample,

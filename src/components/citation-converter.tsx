@@ -54,6 +54,7 @@ import { SignInDialog } from "@/components/auth/sign-in-dialog"
 import { useCitationConverter } from "@/hooks/use-citation-converter"
 import { savePendingConversion } from "@/lib/anonymous-session"
 import { buildReferenceItems } from "@/lib/references/save-payload"
+import { CitationQualityNotice } from "@/components/citation-quality-notice"
 import { sanitizeHtml } from "@/lib/sanitize-html"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import { cn } from "@/lib/utils"
@@ -585,8 +586,16 @@ export function CitationConverter({
                       </div>
                     )}
 
+                  {converter.style === "bibtex" &&
+                    converter.successfulResults.length > 0 && (
+                      <p className="mb-3 text-sm text-muted-foreground">
+                        匯入 EndNote 請使用
+                        RIS，以保留多位作者的姓名結構；其內建 BibTex
+                        篩選器可能需要手動拆分作者。
+                      </p>
+                    )}
                   <div className="grid max-h-[min(28rem,60vh)] min-w-0 max-w-full gap-3.5 overflow-auto overscroll-contain pr-1">
-                    {converter.successfulResults.map((result, index) => {
+                    {converter.displayResults.map((result, index) => {
                       const output = converter.citationTextAt(
                         result,
                         converter.style,
@@ -663,6 +672,9 @@ export function CitationConverter({
                             </CardAction>
                           </CardHeader>
                           <CardContent className="min-w-0 max-w-full overflow-auto p-0">
+                            <CitationQualityNotice
+                              quality={result.data.quality}
+                            />
                             {outputHtml ? (
                               <div
                                 className="m-0 min-w-0 max-w-full overflow-auto [overflow-wrap:anywhere] p-4 font-heading text-[15px] leading-7"

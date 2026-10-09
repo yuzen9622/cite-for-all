@@ -58,12 +58,21 @@ import { cn } from "@/lib/utils"
 import { STYLE_OPTIONS, type CitationStyle } from "@/lib/citations"
 import {
   citationExportText,
+  formatCitationExportHtml,
+  formatCitationEntries,
   formatCitationExport,
   formatRisExport,
   type CitationExportRecord,
 } from "@/lib/export-citations"
 
+import { CitationQualityNotice } from "@/components/citation-quality-notice"
+import { storedRecordQuality } from "@/lib/citation-engine/record-quality"
+import { sanitizeHtml } from "@/lib/sanitize-html"
+import { writeCitationClipboard } from "@/lib/clipboard"
+import type { CslItem } from "@/lib/citation-engine/types"
+
 export interface StoredReference extends EditableReference {
+  csl?: CslItem
   projectId: string
   sortOrder: number
   input: string
@@ -95,6 +104,7 @@ function downloadTextFile(content: string, filename: string, type: string) {
 
 function exportRecord(reference: StoredReference): CitationExportRecord {
   return {
+    csl: reference.csl,
     metadata: {
       title: reference.title,
       authors: reference.authors,
@@ -114,6 +124,7 @@ function exportRecord(reference: StoredReference): CitationExportRecord {
 }
 
 interface SortableReferenceProps {
+  formatted?: { text: string; html?: string }
   reference: StoredReference
   index: number
   startNumber: number
@@ -135,6 +146,7 @@ interface SortableReferenceProps {
 }
 
 function SortableReference({
+  formatted,
   reference,
   index,
   startNumber,
@@ -244,6 +256,11 @@ function SortableReference({
           </div>
         </CardHeader>
         <CardContent>
+          <CitationQualityNotice
+            quality={
+              reference.csl ? storedRecordQuality(reference.csl) : undefined
+            }
+          />
           {isEditing ? (
             <ReferenceEditor
               projectId={projectId}
@@ -252,14 +269,23 @@ function SortableReference({
               onCancel={onCancel}
             />
           ) : (
-            <pre className="overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
-              {citationExportText(
-                exportRecord(reference),
-                style,
-                index,
-                startNumber,
+            <div className="overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
+              {formatted?.html ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHtml(formatted.html),
+                  }}
+                />
+              ) : (
+                (formatted?.text ??
+                citationExportText(
+                  exportRecord(reference),
+                  style,
+                  index,
+                  startNumber,
+                ))
               )}
-            </pre>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -471,6 +497,16 @@ export default function ProjectDetailPage() {
     () => project?.references.map(exportRecord) ?? [],
     [project?.references],
   )
+  const bibliography = useMemo(
+    () =>
+      new Map(
+        formatCitationEntries(records, style, startNumber).map((entry) => [
+          entry.index,
+          entry,
+        ]),
+      ),
+    [records, style, startNumber],
+  )
   const allText = useMemo(
     () => formatCitationExport(records, style, startNumber),
     [records, startNumber, style],
@@ -478,10 +514,15 @@ export default function ProjectDetailPage() {
 
   async function copyAll() {
     try {
-      await navigator.clipboard.writeText(allText)
+      const mode = await writeCitationClipboard(
+        allText,
+        formatCitationExportHtml(records, style, startNumber),
+      )
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
-      toast.success(`已複製 ${records.length} 筆引用。`)
+      toast.success(
+        `已複製 ${records.length} 筆引用${mode === "text" ? "（純文字）" : "（含格式）"}。`,
+      )
     } catch {
       toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
@@ -594,14 +635,21 @@ export default function ProjectDetailPage() {
 
   async function copySelected() {
     try {
-      await navigator.clipboard.writeText(
+      const mode = await writeCitationClipboard(
         formatCitationExport(
           selectedReferences.map(exportRecord),
           style,
           startNumber,
         ),
+        formatCitationExportHtml(
+          selectedReferences.map(exportRecord),
+          style,
+          startNumber,
+        ),
       )
-      toast.success(`已複製 ${selectedReferences.length} 筆引用。`)
+      toast.success(
+        `已複製 ${selectedReferences.length} 筆引用${mode === "text" ? "（純文字）" : "（含格式）"}。`,
+      )
     } catch {
       toast.error("瀏覽器未允許剪貼簿權限，請手動選取文字複製。")
     }
@@ -1015,14 +1063,34 @@ export default function ProjectDetailPage() {
                 />
               </div>
             )}
-            <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
-              {allText || "目前沒有可匯出的文獻。"}
-            </pre>
+            {style === "bibtex" || !records.length ? (
+              <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap border bg-secondary/30 p-4 font-heading text-sm leading-7">
+                {allText || "目前沒有可匯出的文獻。"}
+              </pre>
+            ) : (
+              <div className="max-h-[32rem] overflow-auto border bg-secondary/30 p-4 font-heading text-sm leading-7">
+                {[...bibliography.values()].map((entry) => (
+                  <div
+                    key={entry.index}
+                    className="mb-3 pl-9 -indent-9"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(entry.html ?? entry.text),
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <InlineConverter projectId={projectId} onSaved={handleConverterSaved} />
 
+        {style === "bibtex" && (
+          <p className="mb-3 text-sm text-muted-foreground">
+            匯入 EndNote 請使用 RIS，以保留多位作者的姓名結構；其內建 BibTex
+            篩選器可能需要手動拆分作者。
+          </p>
+        )}
         {project.references.length > 0 && (
           <ReferenceBatchBar
             totalCount={project.references.length}
@@ -1078,6 +1146,7 @@ export default function ProjectDetailPage() {
                   <SortableReference
                     key={reference.id}
                     reference={reference}
+                    formatted={bibliography.get(index)}
                     index={index}
                     startNumber={startNumber}
                     style={style}
