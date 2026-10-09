@@ -1,3 +1,7 @@
+import {
+  assessRecord,
+  storedRecordQuality,
+} from "@/lib/citation-engine/record-quality"
 import { randomBytes } from "node:crypto"
 import {
   formatBibtex,
@@ -10,6 +14,7 @@ import type { CitationMetadata, CitationStyle } from "@/lib/citations"
 type CitationSnapshot = {
   csl: CslItem
   citations: Record<Exclude<CitationStyle, "bibtex">, string>
+  citationsHtml: Record<Exclude<CitationStyle, "bibtex">, string>
   bibtex: string
 }
 
@@ -22,14 +27,46 @@ function referenceCuid() {
 
 export function rebuildReferenceCitations(
   csl: CslItem,
-  metadata: CitationMetadata,
+  metadata: Partial<CitationMetadata>,
+  options: { edited?: boolean } = {},
 ): CitationSnapshot {
   const nextCsl = applyMetadataToCsl(csl, metadata)
+  const previousQuality = storedRecordQuality(csl)
+  if (options.edited && previousQuality) {
+    const fields = { ...previousQuality.fields }
+    const changed = Object.keys({ ...csl, ...nextCsl }).filter(
+      (key) =>
+        key !== "custom" &&
+        JSON.stringify(csl[key]) !== JSON.stringify(nextCsl[key]),
+    )
+    for (const key of changed) {
+      if (nextCsl[key] === undefined) delete fields[key]
+      else fields[key] = { provider: "manual", providerId: "reference-editor" }
+    }
+    const quality = assessRecord({
+      csl: nextCsl,
+      metadata: { title: nextCsl.title, authors: [] },
+      provider: "crossref",
+      providerId: "stored",
+      quality: {
+        ...previousQuality,
+        fields,
+        conflicts: previousQuality.conflicts.filter(
+          (key) => !changed.includes(key),
+        ),
+      },
+    })
+    nextCsl.custom = {
+      ...(nextCsl.custom as object),
+      citationIntegrity: quality,
+    }
+  }
   const formatted = formatAllCitations(nextCsl)
 
   return {
     csl: nextCsl,
     citations: formatted.citations,
+    citationsHtml: formatted.citationsHtml,
     bibtex: formatBibtex(nextCsl),
   }
 }

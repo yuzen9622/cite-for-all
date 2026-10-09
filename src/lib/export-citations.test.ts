@@ -33,18 +33,12 @@ const record: CitationExportRecord = {
 
 describe("citationExportHtml", () => {
   it("renumbers the IEEE bracket in the left margin", () => {
-    expect(citationExportHtml(record, "ieee", 2, 1)).toContain(
-      '<div class="csl-left-margin">[3]</div>',
-    )
-    expect(citationExportHtml(record, "ieee", 2, 1)).not.toContain(
-      'csl-left-margin">[1]</div>',
-    )
+    expect(citationExportHtml(record, "ieee", 2, 1)).toContain("[3]&#9;")
+    expect(citationExportHtml(record, "ieee", 2, 1)).not.toContain("[1]&#9;")
   })
 
   it("renumbers the Vancouver number in the left margin", () => {
-    expect(citationExportHtml(record, "vancouver", 2, 1)).toContain(
-      '<div class="csl-left-margin">3.</div>',
-    )
+    expect(citationExportHtml(record, "vancouver", 2, 1)).toContain("3.&#9;")
   })
 
   it("keeps italics intact after renumbering", () => {
@@ -64,8 +58,8 @@ describe("citationExportHtml", () => {
 
   it("aggregates all entries for batch copy", () => {
     const joined = formatCitationExportHtml([record, record], "ieee", 1)
-    expect(joined).toContain("[2]</div>")
-    expect(joined).toContain("[2]</div>")
+    expect(joined).toContain("[2]&#9;")
+    expect(joined).toContain("[2]&#9;")
     expect(joined).toContain("<i>IEEE Trans. Learn. Technol.</i>")
   })
 

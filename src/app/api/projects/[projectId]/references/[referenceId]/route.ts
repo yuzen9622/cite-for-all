@@ -156,7 +156,8 @@ export async function PATCH(
     try {
       snapshot = rebuildReferenceCitations(
         reference.csl as unknown as CslItem,
-        metadata as unknown as CitationMetadata,
+        parsed.data as unknown as CitationMetadata,
+        { edited: true },
       )
     } catch (error) {
       throw new FormattingError("文獻格式無法產生，原資料未變更。", {

@@ -42,3 +42,42 @@ describe("reference writer", () => {
     expect(after.bibtex).not.toBe(before.bibtex)
   })
 })
+
+it("updates field provenance for edits without attributing manual changes to a provider", () => {
+  const original = cslFromMetadata({
+    title: "Original",
+    authors: ["Doe, Jane"],
+    year: 2024,
+  })
+  original.custom = {
+    citationIntegrity: {
+      status: "incomplete",
+      missing: ["page"],
+      conflicts: [],
+      warnings: [],
+      fields: {
+        title: { provider: "doi.org", providerId: "source" },
+        author: { provider: "crossref", providerId: "source" },
+      },
+    },
+  }
+  const after = rebuildReferenceCitations(
+    original,
+    { title: "Edited" },
+    { edited: true },
+  )
+  expect(
+    (
+      after.csl.custom as {
+        citationIntegrity: { fields: Record<string, { provider: string }> }
+      }
+    ).citationIntegrity.fields.title.provider,
+  ).toBe("manual")
+  expect(
+    (
+      after.csl.custom as {
+        citationIntegrity: { fields: Record<string, { provider: string }> }
+      }
+    ).citationIntegrity.fields.author.provider,
+  ).toBe("crossref")
+})
