@@ -1,5 +1,6 @@
 import { cleanDoi, normalizeDoi } from "@/lib/citation-engine/input-parser"
 import { resolveContainerTitleShort } from "@/lib/citation-engine/journal-abbreviation"
+import { safeTitleMarkup } from "@/lib/citation-engine/title-markup"
 import { stripMarkup } from "@/lib/citation-engine/title-matcher"
 import type { CitationMetadata } from "@/lib/citations"
 import type {
@@ -25,8 +26,12 @@ function textFromFirst(value: unknown) {
 }
 
 function titleWithSubtitle(titleValue: unknown, subtitleValue: unknown) {
-  const title = textFromFirst(titleValue)
-  const subtitle = textFromFirst(subtitleValue)
+  const rich = (value: unknown) => {
+    const first = Array.isArray(value) ? value[0] : value
+    return typeof first === "string" ? safeTitleMarkup(first).trim() : undefined
+  }
+  const title = rich(titleValue)
+  const subtitle = rich(subtitleValue)
 
   if (!title || !subtitle) {
     return title
@@ -51,11 +56,11 @@ function dateFromYear(year: unknown): CslDate | undefined {
   const parsed =
     typeof year === "number"
       ? year
-      : typeof year === "string"
-        ? Number.parseInt(year, 10)
+      : typeof year === "string" && /^\d{1,4}$/.test(year)
+        ? Number(year)
         : Number.NaN
 
-  return Number.isInteger(parsed) && parsed > 0
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 9999
     ? { "date-parts": [[parsed]] }
     : undefined
 }
@@ -65,16 +70,27 @@ function issuedDate(value: unknown): CslDate | undefined {
     return undefined
   }
 
-  const dateParts = (value as { "date-parts"?: unknown })["date-parts"]
-  if (
-    Array.isArray(dateParts) &&
-    Array.isArray(dateParts[0]) &&
-    dateParts[0].every((part) => typeof part === "number")
-  ) {
-    return { "date-parts": [dateParts[0]] }
+  const dateParts = (value as CslDate)["date-parts"]
+  if (!Array.isArray(dateParts) || !dateParts.length || dateParts.length > 2)
+    return undefined
+  for (const parts of dateParts) {
+    if (
+      !Array.isArray(parts) ||
+      !parts.length ||
+      parts.length > 3 ||
+      !parts.every(Number.isInteger) ||
+      parts[0] < 1 ||
+      parts[0] > 9999
+    )
+      return undefined
+    const [year, month, day] = parts
+    if (month !== undefined && (month < 1 || month > 12)) return undefined
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    if (day !== undefined && (day < 1 || day > days[month - 1]))
+      return undefined
   }
-
-  return undefined
+  return { "date-parts": dateParts.map((parts) => [...parts]) }
 }
 
 function namesFromUnknown(value: unknown): CslName[] | undefined {
@@ -90,17 +106,37 @@ function namesFromUnknown(value: unknown): CslName[] | undefined {
     const record = entry as Record<string, unknown>
     const family = text(record.family)
     const given = text(record.given)
-    const literal = text(record.literal)
+    const literal = text(record.literal ?? record.name)
 
-    return family || given || literal ? [{ family, given, literal }] : []
+    if (!family && !given && !literal) return []
+    const name: CslName = { family, given, literal }
+    for (const key of [
+      "non-dropping-particle",
+      "dropping-particle",
+      "suffix",
+    ] as const) {
+      if (text(record[key])) name[key] = text(record[key])
+    }
+    for (const key of ["comma-suffix", "static-ordering"] as const) {
+      if (typeof record[key] === "boolean") name[key] = record[key]
+    }
+    return [name]
   })
 
   return names.length ? names : undefined
 }
 
-function displayName(name: CslName) {
+export function displayName(name: CslName) {
   return (
-    [name.given, name.family].filter(Boolean).join(" ") ||
+    [
+      name.given,
+      name["dropping-particle"],
+      name["non-dropping-particle"],
+      name.family,
+      name.suffix,
+    ]
+      .filter(Boolean)
+      .join(" ") ||
     name.literal ||
     "Unknown author"
   )
@@ -140,13 +176,9 @@ export function recordFromCsl(
     textFromFirst(raw["short-container-title"]) ??
     textFromFirst(raw["journal-abbreviation"])
   const issued =
-    issuedDate(
-      raw.issued ??
-        raw.published ??
-        raw["published-print"] ??
-        raw["published-online"] ??
-        raw.created,
-    ) ?? dateFromYear(raw.year)
+    [raw.issued, raw.published, raw["published-print"], raw["published-online"]]
+      .map(issuedDate)
+      .find(Boolean) ?? dateFromYear(raw.year)
   const csl: CslItem = {
     id: text(raw.id) ?? normalizedDoi ?? fallbackId,
     type: cslType(raw.type),
@@ -162,9 +194,66 @@ export function recordFromCsl(
     issue: stringValue(raw.issue),
     page: stringValue(raw.page),
     DOI: doi ? cleanDoi(doi) : undefined,
-    publisher: text(raw.publisher),
+    publisher:
+      text(raw.publisher) ??
+      text((raw.publisher as { name?: unknown } | null)?.name),
     URL: text(raw.URL ?? raw.url),
   }
+
+  for (const key of [
+    "editor",
+    "translator",
+    "container-author",
+    "collection-editor",
+  ] as const) {
+    const names = namesFromUnknown(raw[key])
+    if (names) csl[key] = names
+  }
+  for (const key of [
+    "edition",
+    "ISBN",
+    "ISSN",
+    "publisher-place",
+    "language",
+    "collection-title",
+    "collection-number",
+    "number",
+    "article-number",
+    "title-short",
+    "event-title",
+    "event-place",
+    "genre",
+    "version",
+    "medium",
+  ] as const) {
+    const value =
+      stringValue(raw[key]) ??
+      (Array.isArray(raw[key])
+        ? raw[key].map(stringValue).filter(Boolean).join("; ")
+        : undefined)
+    if (value) csl[key] = value
+  }
+  csl.edition ??= stringValue(raw["edition-number"])
+  csl["publisher-place"] ??= text(raw["publisher-location"])
+  csl.number ??= stringValue(raw["article-number"])
+  const accessed = issuedDate(raw.accessed)
+  if (accessed) csl.accessed = accessed
+  // Crossref/DOI book containers describe the series, not a containing work.
+  if (csl.type === "book" && containerTitle) {
+    csl["collection-title"] ??= containerTitle
+    delete csl["container-title"]
+    delete csl["container-title-short"]
+  }
+
+  if (typeof raw["sentence-case-title"] === "string")
+    csl["sentence-case-title"] = safeTitleMarkup(raw["sentence-case-title"])
+
+  if (
+    raw.custom &&
+    typeof raw.custom === "object" &&
+    !Array.isArray(raw.custom)
+  )
+    csl.custom = structuredClone(raw.custom)
 
   const year = issued?.["date-parts"]?.[0]?.[0]
 
@@ -173,7 +262,7 @@ export function recordFromCsl(
     provider,
     providerId: fallbackId,
     metadata: {
-      title,
+      title: stripMarkup(title).replace(/\s+/g, " ").trim(),
       authors: csl.author?.map(displayName) ?? [],
       year,
       journal: csl["container-title"],
@@ -194,21 +283,16 @@ function nameFromDisplayName(value: string) {
     return null
   }
 
+  if (name.endsWith(",")) return { literal: name.slice(0, -1).trim() }
+
   if (name.includes(",")) {
     const [family, ...givenParts] = name.split(",")
     const given = givenParts.join(",").trim()
-    return given ? { family: family.trim(), given } : { family: family.trim() }
+    return given ? { family: family.trim(), given } : { literal: family.trim() }
   }
 
-  const parts = name.split(/\s+/).filter(Boolean)
-  if (parts.length < 2) {
-    return { literal: name }
-  }
-
-  return {
-    family: parts.at(-1),
-    given: parts.slice(0, -1).join(" "),
-  }
+  // A display string cannot reliably identify personal/compound family names.
+  return { literal: name }
 }
 
 function setOptionalCslField(
@@ -224,31 +308,45 @@ function setOptionalCslField(
   target[key] = value as never
 }
 
-function editableValue(metadata: CitationMetadata, key: string) {
+function editableValue(metadata: Partial<CitationMetadata>, key: string) {
   return (metadata as unknown as Record<string, unknown>)[key]
 }
 
-function editableString(metadata: CitationMetadata, key: string) {
+function editableString(metadata: Partial<CitationMetadata>, key: string) {
   const value = editableValue(metadata, key)
   return typeof value === "string" || value === null ? value : undefined
 }
 
 export function applyMetadataToCsl(
   base: CslItem,
-  metadata: CitationMetadata,
+  metadata: Partial<CitationMetadata>,
 ): CslItem {
   const next: CslItem = { ...base }
   const title = editableString(metadata, "title")
   const authorsValue = editableValue(metadata, "authors")
 
-  if (title !== null && title !== undefined && title.trim()) {
-    next.title = title.trim()
+  if (
+    title !== null &&
+    title !== undefined &&
+    title.trim() &&
+    title.trim() !== stripMarkup(base.title).replace(/\s+/g, " ").trim()
+  ) {
+    next.title = safeTitleMarkup(title.trim())
+    delete next["sentence-case-title"]
   }
 
-  if (Array.isArray(authorsValue)) {
+  if (
+    Array.isArray(authorsValue) &&
+    JSON.stringify(authorsValue) !==
+      JSON.stringify(base.author?.map(displayName) ?? [])
+  ) {
     const authors = authorsValue
       .filter((author): author is string => typeof author === "string")
-      .map(nameFromDisplayName)
+      .map(
+        (value) =>
+          base.author?.find((name) => displayName(name) === value) ??
+          nameFromDisplayName(value),
+      )
       .filter((name): name is NonNullable<typeof name> => Boolean(name))
 
     if (authors.length) {
@@ -263,7 +361,9 @@ export function applyMetadataToCsl(
     if (year === null) {
       delete next.issued
     } else if (typeof year === "number" && Number.isInteger(year) && year > 0) {
-      next.issued = { "date-parts": [[year]] }
+      if (year !== base.issued?.["date-parts"]?.[0]?.[0]) {
+        next.issued = { "date-parts": [[year]] }
+      }
     }
   }
 
@@ -323,9 +423,9 @@ export function crossrefRecord(
       ...raw,
       id: doi ?? raw.URL,
       type: cslType(raw.type),
-      title: textFromFirst(raw.title),
+      title: raw.title,
       author: raw.author,
-      issued: raw.issued ?? raw.published ?? raw.created,
+      issued: raw.issued,
       "container-title": textFromFirst(raw["container-title"]),
       DOI: doi,
       URL: raw.URL,
@@ -446,4 +546,18 @@ export function openAlexRecord(
     "openalex",
     text(raw.id) ?? doi ?? "openalex-record",
   )
+}
+
+/** Repair representational aliases for display/export without writing stored references. */
+export function cslForOutput(item: CslItem): CslItem {
+  const next = { ...item }
+  if (next.type === "book" && next["container-title"]) {
+    next["collection-title"] ??= next["container-title"]
+    delete next["container-title"]
+    delete next["container-title-short"]
+  }
+  next.number ??= next["article-number"]
+  next.edition ??= next["edition-number"]
+  next["publisher-place"] ??= next["publisher-location"]
+  return next
 }

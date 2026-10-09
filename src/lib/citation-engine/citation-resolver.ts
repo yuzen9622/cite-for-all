@@ -1,3 +1,4 @@
+import { assessRecord, mergeRecords } from "./record-quality"
 import { CitationCache } from "@/lib/citation-engine/citation-cache"
 import {
   classifyInput,
@@ -112,6 +113,7 @@ export class CitationResolver {
 
     const errors: ProviderError[] = []
     let responded = false
+    let best: ProviderRecord | undefined
 
     for (const provider of this.doiProviders) {
       if (!provider.getByDoi) {
@@ -129,8 +131,11 @@ export class CitationResolver {
             csl: { ...record.csl, DOI: displayDoi },
             metadata: { ...record.metadata, doi: displayDoi },
           }
-          this.cache.set(cacheKey, recordWithInputDoi)
-          return recordWithInputDoi
+          best = best
+            ? mergeRecords(best, recordWithInputDoi)
+            : recordWithInputDoi
+          best.quality = assessRecord(best)
+          if (best.quality.status === "resolved") break
         }
       } catch (error) {
         if (error instanceof ProviderError) {
@@ -139,6 +144,11 @@ export class CitationResolver {
         }
         throw error
       }
+    }
+
+    if (best) {
+      this.cache.set(cacheKey, best)
+      return best
     }
 
     if (!responded && errors.length > 0) {
@@ -172,7 +182,12 @@ export class CitationResolver {
         const records = await provider.searchByTitle(title, signal)
         responded = true
         for (const match of exactTitleMatches(title, records)) {
-          exactMatches.set(recordIdentity(match), match)
+          const key = recordIdentity(match)
+          const existing = exactMatches.get(key)
+          exactMatches.set(
+            key,
+            existing ? mergeRecords(existing, match) : match,
+          )
         }
       } catch (error) {
         if (error instanceof ResolutionError) {
@@ -230,7 +245,14 @@ export class CitationResolver {
     }
 
     try {
-      return await this.resolveDoi(doi, signal)
+      const authoritative = await this.resolveDoi(doi, signal)
+      if (
+        normalizeTitle(authoritative.csl.title) !==
+          normalizeTitle(matched.csl.title) ||
+        authoritative.csl.type !== matched.csl.type
+      )
+        return mergeRecords(matched, authoritative)
+      return mergeRecords(authoritative, matched)
     } catch {
       return matched
     }

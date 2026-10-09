@@ -1,3 +1,4 @@
+import { assessRecord } from "./record-quality"
 import { formatAllCitations } from "@/lib/citation-engine/citation-formatter"
 import { CitationResolver } from "@/lib/citation-engine/citation-resolver"
 import type { CitationData } from "@/lib/citations"
@@ -9,16 +10,19 @@ export async function createCitation(
   signal?: AbortSignal,
 ): Promise<CitationData> {
   const resolved = await resolver.resolve(input, signal)
-  const formatted = formatAllCitations(resolved.record.csl)
+  const quality = assessRecord(resolved.record)
+  const csl = { ...resolved.record.csl, custom: { citationIntegrity: quality } }
+  const formatted = formatAllCitations(csl)
 
   return {
     success: true,
     inputType: resolved.inputType,
     metadata: resolved.record.metadata,
-    csl: resolved.record.csl,
+    csl,
     citations: formatted.citations,
     citationsHtml: formatted.citationsHtml,
     bibtex: formatted.bibtex,
+    quality,
     provenance: {
       provider: resolved.record.provider,
       providerId: resolved.record.providerId,

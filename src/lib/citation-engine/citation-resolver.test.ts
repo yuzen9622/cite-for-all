@@ -158,3 +158,21 @@ describe("CitationResolver", () => {
     )
   })
 })
+
+it("does not replace an exact-title match with incompatible DOI metadata", async () => {
+  const matched = record("Requested title", "10.1000/same")
+  const resolver = new CitationResolver({
+    titleProviders: [
+      { name: "crossref", searchByTitle: async () => [matched] },
+    ],
+    doiProviders: [
+      {
+        name: "doi.org",
+        getByDoi: async () => record("Different title", "10.1000/same"),
+      },
+    ],
+  })
+  const resolved = await resolver.resolve("Requested title")
+  expect(resolved.record.csl.title).toBe("Requested title")
+  expect(resolved.record.quality?.status).toBe("conflicting")
+})

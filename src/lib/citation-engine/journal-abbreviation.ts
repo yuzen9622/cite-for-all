@@ -206,7 +206,7 @@ export function abbreviateJournal(fullTitle: string): string | undefined {
     return undefined
   }
 
-  return IEEE_JOURNALS[key] ?? COMMON_JOURNALS[key]
+  return NORMALIZED_JOURNALS[key]
 }
 
 /**
@@ -231,3 +231,9 @@ export function resolveContainerTitleShort(
 
   return undefined
 }
+
+const NORMALIZED_JOURNALS = Object.fromEntries(
+  Object.entries({ ...COMMON_JOURNALS, ...IEEE_JOURNALS }).map(
+    ([key, value]) => [normalizeJournalName(key), value],
+  ),
+)

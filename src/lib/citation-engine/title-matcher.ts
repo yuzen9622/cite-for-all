@@ -38,14 +38,14 @@ export function decodeHtmlEntities(value: string) {
 }
 
 export function stripMarkup(value: string) {
-  return decodeHtmlEntities(value.replace(/<[^>]*>/g, " "))
+  return decodeHtmlEntities(value.replace(/<[^>]*>/g, ""))
 }
 
 export function normalizeTitle(value: string) {
   return stripMarkup(value)
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
-    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/[,:;.!?"“”‘’–—-]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
 }

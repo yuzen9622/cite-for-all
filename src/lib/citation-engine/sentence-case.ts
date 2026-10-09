@@ -1,19 +1,9 @@
-/**
- * IEEE 文章標題 sentence case 轉換。
- *
- * IEEE reference list 的文章標題應採 sentence case：原則上僅「首字、
- * 冒號後首字」與「專有名詞／縮寫」大寫。metadata 供應商常回傳 Title Case
- * （例如 "Big Data and Learning Analytics in Higher Education"），
- * 因此於 IEEE 格式輸出前做此轉換。
- *
- * 轉換採保守策略，只降小寫「可安全轉換」的單字：
- * - 保留全大寫縮寫（AI、MOOC、IEEE、COVID-19）
- * - 保留含內部大寫的商標／專名（LaTeX、iPhone、OpenAlex）
- * - 保留含句點的字（U.S.、e.g.、Ph.D.）
- * - 保留以數字開頭的字（3D）
- * - 句子開頭（整段開頭、冒號／句點／問號／驚嘆號之後）的首字維持大寫
- * - 其餘字降為小寫（Learning → learning）
- */
+// Only lowercase common bibliographic words. Unknown capitals require human review.
+const COMMON_WORDS = new Set(
+  "a an the of on in with and or for from to by at as effects effectiveness learning memory big data analytics higher education look use cases standard study massive open online courses case intelligent tutoring systems meta-analytic review test title reference guide measurements cells programming".split(
+    " ",
+  ),
+)
 
 function shouldPreserveCase(word: string) {
   const letters = word.match(/\p{L}/gu) ?? []
@@ -47,7 +37,10 @@ function shouldPreserveCase(word: string) {
     return true
   }
 
-  return false
+  return (
+    /^[A-Z]/.test(word) &&
+    !COMMON_WORDS.has(word.toLowerCase().replace(/[,;:!?]$/g, ""))
+  )
 }
 
 function capitalizeFirst(word: string) {
@@ -58,7 +51,15 @@ function capitalizeFirst(word: string) {
  * 將文章標題轉成 sentence case。
  */
 export function sentenceCaseTitle(title: string) {
-  const tokens = title.split(/(\s+)/)
+  const protectedParts: string[] = []
+  const protectedTitle = title.replace(
+    /<(?:span|i|b|sup|sub)\b[^>]*>.*?<\/(?:span|i|b|sup|sub)>/gi,
+    (value) => {
+      protectedParts.push(value)
+      return `PROTECTED${protectedParts.length - 1}TOKEN`
+    },
+  )
+  const tokens = protectedTitle.split(/(\s+)/)
   let lastNonSpace = ""
 
   return tokens
@@ -80,4 +81,16 @@ export function sentenceCaseTitle(title: string) {
         : token.toLocaleLowerCase("en-US")
     })
     .join("")
+    .replace(
+      /PROTECTED(\d+)TOKEN/g,
+      (_, index) => protectedParts[Number(index)],
+    )
+}
+
+export function titleNeedsReview(title: string, language?: string) {
+  if (language && !/^en(?:-|$)/i.test(language)) return false
+  const words = title.replace(/<[^>]+>/g, "").split(/\s+/)
+  return words
+    .slice(1)
+    .some((word) => /^[A-Z][a-z]+/.test(word) && shouldPreserveCase(word))
 }

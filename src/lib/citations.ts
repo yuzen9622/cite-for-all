@@ -37,6 +37,7 @@ export interface CitationData {
   /** 含斜體等 Rich Text 標記的 HTML 版引用（UI 展示與 Rich Text 複製用） */
   citationsHtml: Record<Exclude<CitationStyle, "bibtex">, string>
   bibtex: string
+  quality?: import("./citation-engine/record-quality").RecordQuality
   provenance: {
     provider: "doi.org" | "crossref" | "datacite" | "openalex"
     providerId: string
@@ -198,4 +199,70 @@ export function citationText(
   }
 
   return raw
+}
+
+export function risName(name: import("./citation-engine/types").CslName) {
+  if (name.literal)
+    return name.literal.includes(",")
+      ? name.literal.replace(",", ",,")
+      : `${name.literal},`
+  const family = [name["non-dropping-particle"], name.family]
+    .filter(Boolean)
+    .join(" ")
+  const given = [name.given, name["dropping-particle"]]
+    .filter(Boolean)
+    .join(" ")
+  return `${family}, ${given}${name.suffix ? `, ${name.suffix}` : ""}`.trim()
+}
+
+/** Structured CSL is the authoritative source for interchange, not display names. */
+export function formatRisCsl(items: CslItem[]) {
+  return (
+    items
+      .map((c) => {
+        const lines = [`TY  - ${RIS_TYPE_BY_CSL[c.type] ?? "GEN"}`]
+        for (const name of c.author ?? [])
+          appendRisField(lines, "AU", risName(name))
+        for (const name of (c.editor ??
+          []) as import("./citation-engine/types").CslName[])
+          appendRisField(lines, "A2", risName(name))
+        for (const name of (c.translator ??
+          []) as import("./citation-engine/types").CslName[])
+          appendRisField(lines, "A4", risName(name))
+        const date = c.issued?.["date-parts"]?.[0]
+        const pages = risPages(c.page)
+        const fields: Record<string, unknown> = {
+          TI: c.title.replace(/<[^>]*>/g, ""),
+          T2: c["container-title"],
+          T3: c["collection-title"],
+          PY: date?.[0],
+          DA: date
+            ?.map((part, index) =>
+              index ? String(part).padStart(2, "0") : String(part),
+            )
+            .join("/"),
+          VL: c.volume,
+          IS: c.issue,
+          SP: pages.start,
+          EP: pages.end,
+          C7: c.number,
+          DO: c.DOI,
+          PB: c.publisher,
+          CY: c["publisher-place"],
+          ET: c.edition,
+          SN: c.ISBN ?? c.ISSN,
+          LA: c.language,
+          UR: c.URL ?? (c.DOI ? `https://doi.org/${c.DOI}` : undefined),
+          Y2: (
+            c.accessed as import("./citation-engine/types").CslDate | undefined
+          )?.["date-parts"]?.[0]?.join("/"),
+        }
+        for (const [tag, value] of Object.entries(fields))
+          if (typeof value === "string" || typeof value === "number")
+            appendRisField(lines, tag, value)
+        lines.push("ER  - ")
+        return lines.join("\r\n")
+      })
+      .join("\r\n\r\n") + (items.length ? "\r\n" : "")
+  )
 }

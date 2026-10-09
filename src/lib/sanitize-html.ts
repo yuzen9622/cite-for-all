@@ -38,7 +38,11 @@ function sanitizeNode(node: Element) {
 
 export function sanitizeHtml(html: string): string {
   if (typeof document === "undefined") {
-    return html
+    return html.replace(/<[^>]*>/g, (tag) => {
+      if (/^<\/?(?:i|em|b|strong|sub|sup|span)\s*>$/i.test(tag)) return tag
+      if (/^<span style="font-variant:\s*small-caps;?">$/i.test(tag)) return tag
+      return ""
+    })
   }
 
   const doc = new DOMParser().parseFromString(html, "text/html")

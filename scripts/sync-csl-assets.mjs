@@ -95,3 +95,5 @@ await save(
   (content) =>
     content.includes("Common Public Attribution License Version 1.0"),
 )
+
+await import("./bundle-csl-assets.mjs")

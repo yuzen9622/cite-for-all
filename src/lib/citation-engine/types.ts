@@ -7,6 +7,11 @@ export type ProviderName = "doi.org" | "crossref" | "datacite" | "openalex"
 export interface CslName {
   family?: string
   given?: string
+  "non-dropping-particle"?: string
+  "dropping-particle"?: string
+  suffix?: string
+  "comma-suffix"?: boolean
+  "static-ordering"?: boolean
   literal?: string
 }
 
@@ -33,6 +38,7 @@ export interface CslItem {
 }
 
 export interface ProviderRecord {
+  quality?: import("./record-quality").RecordQuality
   csl: CslItem
   metadata: CitationMetadata
   provider: ProviderName

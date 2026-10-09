@@ -25,7 +25,7 @@ describe("metadata normalization", () => {
     expect(result?.csl).toMatchObject({
       DOI: "10.1000/TEST",
       type: "article-journal",
-      title: "A & B: A Review",
+      title: "<i>A &amp; B</i>: A Review",
     })
     expect(result?.metadata).toMatchObject({
       authors: ["Jane Doe"],
